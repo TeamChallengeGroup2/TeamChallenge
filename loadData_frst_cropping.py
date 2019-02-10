@@ -72,7 +72,7 @@ def cropROI(arrayin):
             
     #apply fast radil symmetry transform
     #syntax: frst(image, radius, strictness, gradient threshold, gaussian std, mode)
-    #returns binary image with white = most radially symmetric pixels
+    #returns grayscale image with white = most radially symmetric pixels
     center=frst.frst(im, LVradius, 0.01,0.5, 1, mode='BRIGHT')
     print(center.shape)
     plt.figure(2)
