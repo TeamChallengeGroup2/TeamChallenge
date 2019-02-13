@@ -3,8 +3,10 @@ import numpy as np
 import SimpleITK as sitk
 from frst import frst
 import matplotlib.pyplot as plt
+import cv2
+from PIL import Image
 
-os.chdir('C:/Users/s141352/Documents/BMT/Master/Team Challenge/Part 2')
+os.chdir('C:/Users/Guus/Desktop/Team challenge/TeamChallenge')
 
 def loadData():
     l=[]
@@ -64,29 +66,46 @@ def cropROI(arrayin):
     LVradius=20 #the radius used in frst, which should be the radius of the LV in the top image
     cropdiam=50 #the length in X and Y direction of the cropped image
     
-    im=arrayin[1,:,:]
-    print(im.shape)
-    plt.figure(1)
-    plt.imshow(im,cmap='gray')
-    plt.show()
+    
+    topslice=arrayin[1,:,:]
+    
+    
+    #im=arrayin[1,:,:]
+    #im=Image.fromarray(arrayin[1,:,:], 'L')
+    im = np.array((topslice/np.amax(topslice)) * 255, dtype = np.uint8)
+    #cv2.imshow('image', im)
+    #print(im.shape)
+    #plt.figure(1)
+    #plt.imshow(im,cmap='gray')
+    #plt.show()
             
     #apply fast radil symmetry transform
     #syntax: frst(image, radius, strictness, gradient threshold, gaussian std, mode)
     #returns grayscale image with white = most radially symmetric pixels
-    center=frst.frst(im, LVradius, 0.01,0.5, 1, mode='BRIGHT')
-    print(center.shape)
-    plt.figure(2)
-    plt.imshow(center,cmap='gray')
-    plt.show()
+    #center=frst.frst(im, LVradius, 0.01,0.5, 1, mode='BRIGHT')
+    
+    
+    
+    circles=cv2.HoughCircles(im, cv2.HOUGH_GRADIENT, 1, 100, param1=50, param2=30, minRadius=LVradius-10, maxRadius=LVradius+10)
+    
+    print(circles)
+    
+    plt.figure(1)
+    plt.imshow(im, cmap='gray')
+    
+    #print(center.shape)
+    #plt.figure(2)
+    #plt.imshow(center,cmap='gray')
+    #plt.show()
             
     #assume brightest pixel is center of LV
-    ind = np.unravel_index(np.argmax(center, axis=None), center.shape)
-    print(ind)
+    #ind = np.unravel_index(np.argmax(center, axis=None), center.shape)
+    #print(ind)
             
     #crop on centerpoint with cropdiam
-    croppedim=im[ind[0]-cropdiam:ind[0]+cropdiam,ind[1]-cropdiam:ind[1]+cropdiam]
+    #croppedim=im[ind[0]-cropdiam:ind[0]+cropdiam,ind[1]-cropdiam:ind[1]+cropdiam]
             
-    return croppedim
+    #return croppedim
 
 l=loadData()
 patient1=l[0]
