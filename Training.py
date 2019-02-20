@@ -24,6 +24,8 @@ import SimpleITK as sitk
 import keras
 import pickle
 import time
+import matplotlib.pyplot as plt
+import random
 
 #---------------------------------------------------------------------------------------------------
 # LOADING THE DATA
@@ -60,6 +62,11 @@ for i, name in enumerate(os.listdir('Data')):
     arr_ESframe= sitk.GetArrayFromImage(im_ESframe)
     arr_ESgt= sitk.GetArrayFromImage(im_ESgt)
     
+    arr_EDframe=arr_EDframe[:,50:100,50:100]
+    arr_EDgt=arr_EDgt[:,50:100,50:100]
+    arr_ESframe=arr_ESframe[:,50:100,50:100]
+    arr_ESgt=arr_ESgt[:,50:100,50:100]
+    
     NSlices=arr_EDframe.shape[0]
     
     #l=list with the patient number, the number of slices per frame, and the four 3D frames as arrays
@@ -74,6 +81,7 @@ for i in range(100):
     for h in range(n):
         output.append([l[i][0],h+1,l[i][2][h],l[i][3][h],l[i][4][h],l[i][5][h]])
         slice_count.append(slice_count[i]+n)
+        
 
 #---------------------------------------------------------------------------------------------------
 # DEFINING THE NEURAL NETWORK
@@ -88,10 +96,10 @@ def buildUnet():
     cnn = keras.models.Sequential()
 
     # The network starts with two 3x3 convolution layers, each followed with a rectified linear unit (ReLU)
-    layer0 = keras.layers.Conv2D(64, (3, 3), activation='relu', strides=1, input_shape=(572, 572, 1))
+    layer0 = keras.layers.Conv2D(16, (3, 3), activation='relu', strides=1, input_shape=(256, 216, 1))
     cnn.add(layer0)
     
-    layer1 = keras.layers.Conv2D(64, (3, 3), activation='relu', strides=1)
+    layer1 = keras.layers.Conv2D(16, (3, 3), activation='relu', strides=1)
     cnn.add(layer1)
 
     # Next, a 2x2 max pooling operation with stride 2 for downsampling is added
@@ -100,76 +108,76 @@ def buildUnet():
 
     # These steps of convolution and max pooling is repeated in the following layers resulting
     # in an output of 1024 feature maps
-    layer3 = keras.layers.Conv2D(128, (3,3), activation='relu', strides=1)
+    layer3 = keras.layers.Conv2D(32, (3,3), activation='relu', strides=1)
     cnn.add(layer3)
     
-    layer4 = keras.layers.Conv2D(128, (3,3), activation='relu', strides=1)
+    layer4 = keras.layers.Conv2D(32, (3,3), activation='relu', strides=1)
     cnn.add(layer4)
     
     layer5 = keras.layers.MaxPooling2D(pool_size=(2,2), strides=2)
     cnn.add(layer5)
     
-    layer6 = keras.layers.Conv2D(256, (3,3), activation='relu', strides=1)
+    layer6 = keras.layers.Conv2D(64, (3,3), activation='relu', strides=1)
     cnn.add(layer6)
 
-    layer7 = keras.layers.Conv2D(256, (3,3), activation='relu', strides=1)
+    layer7 = keras.layers.Conv2D(64, (3,3), activation='relu', strides=1)
     cnn.add(layer7)
 
     layer8 = keras.layers.MaxPooling2D(pool_size=(2,2), strides=2)
     cnn.add(layer8)
 
-    layer9 = keras.layers.Conv2D(512, (3,3), activation='relu', strides=1)
-    cnn.add(layer9)
+    #layer9 = keras.layers.Conv2D(512, (3,3), activation='relu', strides=1)
+    #cnn.add(layer9)
 
-    layer10 = keras.layers.Conv2D(512, (3,3), activation='relu', strides=1)
-    cnn.add(layer10)
+    #layer10 = keras.layers.Conv2D(512, (3,3), activation='relu', strides=1)
+    #cnn.add(layer10)
 
-    layer11 = keras.layers.MaxPooling2D(pool_size=(2,2), strides=2)
-    cnn.add(layer11)
+    #layer11 = keras.layers.MaxPooling2D(pool_size=(2,2), strides=2)
+    #cnn.add(layer11)
 
-    layer12 = keras.layers.Conv2D(1024, (3,3), activation='relu', strides=1)
-    cnn.add(layer12)
+    #layer12 = keras.layers.Conv2D(1024, (3,3), activation='relu', strides=1)
+    #cnn.add(layer12)
 
-    layer13 = keras.layers.Conv2D(1024, (3,3), activation='relu', strides=1)
-    cnn.add(layer13)
+    #layer13 = keras.layers.Conv2D(1024, (3,3), activation='relu', strides=1)
+    #cnn.add(layer13)
     
     # Next, the upsampling is performed by a 2x2 convolution and after that two times
     # a 3x3 convolution followed by a rectified linear unit (ReLU)
-    layer14 = keras.layers.Conv2D(1024, (2,2), activation='relu', strides=1)
+    layer14 = keras.layers.Conv2D(64, (2,2), activation='relu', strides=1)
     cnn.add(layer14)
     
-    layer15 = keras.layers.Conv2D(512, (3,3), activation='relu', strides=1)
+    layer15 = keras.layers.Conv2D(32, (3,3), activation='relu', strides=1)
     cnn.add(layer15)
     
-    layer16 = keras.layers.Conv2D(512, (3,3), activation='relu', strides=1)
+    layer16 = keras.layers.Conv2D(32, (3,3), activation='relu', strides=1)
     cnn.add(layer16)
     
-    layer17 = keras.layers.Conv2D(512, (2,2), activation='relu', strides=1)
+    layer17 = keras.layers.Conv2D(32, (2,2), activation='relu', strides=1)
     cnn.add(layer17)
     
-    layer18 = keras.layers.Conv2D(256, (3,3), activation='relu', strides=1)
+    layer18 = keras.layers.Conv2D(16, (3,3), activation='relu', strides=1)
     cnn.add(layer18)
     
-    layer19 = keras.layers.Conv2D(256, (3,3), activation='relu', strides=1)
+    layer19 = keras.layers.Conv2D(16, (3,3), activation='relu', strides=1)
     cnn.add(layer19)
     
-    layer20 = keras.layers.Conv2D(256, (2,2), activation='relu', strides=1)
+    layer20 = keras.layers.Conv2D(16, (2,2), activation='relu', strides=1)
     cnn.add(layer20)
     
-    layer21 = keras.layers.Conv2D(128, (3,3), activation='relu', strides=1)
-    cnn.add(layer21)
+    #layer21 = keras.layers.Conv2D(128, (3,3), activation='relu', strides=1)
+    #cnn.add(layer21)
     
-    layer22 = keras.layers.Conv2D(128, (3,3), activation='relu', strides=1)
-    cnn.add(layer22)
+    #layer22 = keras.layers.Conv2D(128, (3,3), activation='relu', strides=1)
+    #cnn.add(layer22)
     
-    layer23 = keras.layers.Conv2D(128, (2,2), activation='relu', strides=1)
-    cnn.add(layer23)
+    #layer23 = keras.layers.Conv2D(128, (2,2), activation='relu', strides=1)
+    #cnn.add(layer23)
     
-    layer24 = keras.layers.Conv2D(64, (3,3), activation='relu', strides=1)
-    cnn.add(layer24)
+    #layer24 = keras.layers.Conv2D(64, (3,3), activation='relu', strides=1)
+    #cnn.add(layer24)
     
-    layer24 = keras.layers.Conv2D(64, (3,3), activation='relu', strides=1)
-    cnn.add(layer24)
+    #layer24 = keras.layers.Conv2D(64, (3,3), activation='relu', strides=1)
+    #cnn.add(layer24)
     
     # Then, a 1x1 convolution layer is added to map each feature vector to the desired
     # number of classes, so 1 or 0 for pixels included or excluded as left ventricle
@@ -181,7 +189,7 @@ def buildUnet():
     cnn.add(layer26)
 
     # Finally the network is optimized using the stochastic gradient descent optimizer
-    keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=0.00005, nesterov=False)
+    sgd=keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=0.00005, nesterov=False)
     cnn.compile(loss='categorical_crossentropy', optimizer=sgd)
     
     return cnn
@@ -221,21 +229,22 @@ def make2Dpatchestest(samples, batch, image, patchsize):
     return X
      
 # Shuffle the data to take a random subset for training later
-random.shuffle(l)
+random.shuffle(output)
 
+  
 # Split the list l into a list containing all ED frames
 EDframes = []
 EDground = []
 ESframes = []
 ESground = []
 
-for i in range(len(l)):
-    EDframes.append(l[i][2])
-    EDground.append(l[i][3])
-    ESframes.append(l[i][4])
-    ESground.append(l[i][5])
+for i in range(len(output)):
+    EDframes.append(output[i][2])
+    EDground.append(output[i][3])
+    ESframes.append(output[i][4])
+    ESground.append(output[i][5])
 
-# Take the ESframes and ED frames 
+# Take the ES frames and ED frames 
 frames = ESframes+EDframes
 groundtruth = ESground+EDground
 
@@ -243,13 +252,15 @@ Train_frames = frames[:int(len(frames)/2)]
 Valid_frames = frames[int(len(frames)/2):int(len(frames)-len(frames)/4)]
 Test_frames = frames[int(len(frames)-len(frames)/4):]
 
+Train_frames=np.vstack(Train_frames)
+
 Train_labels = groundtruth[:int(len(groundtruth)/2)]
 Valid_labels = groundtruth[int(len(groundtruth)/2):int(len(groundtruth)-len(groundtruth)/4)]
 Test_labels = groundtruth[int(len(groundtruth)-len(groundtruth)/4):]
-    
+ 
 # Training the network
-trainingsamples=np.nonzero(Train_labels)
-validsamples=np.nonzero(Valid_labels)
+trainingsamples=np.nonzero(np.vstack(Train_labels)) 
+validsamples=np.nonzero(np.vstack(Valid_labels))
 
 # Initialise the network
 cnn = buildUnet()
@@ -262,9 +273,10 @@ t0 = time.time()
 
 for i in range(minibatches):
     # Select random training en validation samples and perform training and validation steps here.  
-    batch = random.sample(list(range(len(trainingsamples[0]))), int(minibatchsize))
-    
+    batch = random.sample(list(range(len(trainingsamples[0]))), int(minibatchsize/2))
     X, Y = make2Dpatches(trainingsamples,batch,frames,32,1)
+    #X = Train_frames[batch]
+    #Y = Train_labels[batch,:]
     loss = cnn.train_on_batch(X,Y)
     losslist.append(loss)
     print('Batch: {}'.format(i))
