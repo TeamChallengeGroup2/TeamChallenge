@@ -7,7 +7,7 @@ import cv2
 from PIL import Image
 import math 
 
-os.chdir('C:/Users/s141352/Documents/BMT/Master/Team Challenge/Part 2')
+os.chdir('C:/Users/s154150/Desktop/Team Challenge/TeamChallenge')
 
 def loadData():
     l=[]
@@ -69,7 +69,7 @@ def cropROI(arrayin):
     
     
     topslice=arrayin[1,:,:]
-    center=[topslice.shape[0]/2,topslice.shape[1]/2]        #find coordinates of center of image
+    center=[topslice.shape[1]/2,topslice.shape[0]/2]        #find coordinates of center of image
     
     #im=arrayin[1,:,:]
     #im=Image.fromarray(arrayin[1,:,:], 'L')
@@ -85,8 +85,9 @@ def cropROI(arrayin):
     #returns grayscale image with white = most radially symmetric pixels
     #center=frst.frst(im, LVradius, 0.01,0.5, 1, mode='BRIGHT')
     
-    circles=cv2.HoughCircles(im, cv2.HOUGH_GRADIENT, 1, 100, param1=50, param2=30, minRadius=LVradius-10, maxRadius=LVradius+10)
-    
+    circles=cv2.HoughCircles(im, cv2.HOUGH_GRADIENT, 1, 70, param1=40, param2=25, minRadius=LVradius-15, maxRadius=LVradius+15)
+    #print(circles)
+    #print(center)
     #function to calculate distance from coordinates of HoughCircles to center of the image
     def calculateDistance(x1,y1,x2,y2):  
          dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)  
@@ -97,7 +98,7 @@ def cropROI(arrayin):
     for i in range(circles.shape[1]):
         d=calculateDistance(circles[0,i,0],circles[0,i,1],center[0],center[1])
         dist.append(d)
-    
+    #print(dist)
     mindist=np.argmin(dist)         #find index of minimal distance
     
     plt.figure(1)
@@ -117,11 +118,12 @@ def cropROI(arrayin):
     #croppedim=im[ind[0]-cropdiam:ind[0]+cropdiam,ind[1]-cropdiam:ind[1]+cropdiam]
             
     return croppedim
-
-l=loadData()
-patient1=l[0]
-EDpatient1=patient1[2]
-cropped_im=cropROI(EDpatient1)
-plt.figure(2)
-plt.imshow(cropped_im,cmap='gray')
-plt.show()
+for j in range(100):
+    l=loadData()
+    patient1=l[j]
+    EDpatient1=patient1[2]
+    cropped_im=cropROI(EDpatient1)
+    plt.figure(2)
+    plt.imshow(cropped_im,cmap='gray')
+    plt.show()
+    print(j)
