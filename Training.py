@@ -259,7 +259,8 @@ if trainnetwork:
 else:
     # Load the network
     cnn = keras.models.load_model(networkpath)
-
+    
+"""
 # Validation
 validlosslist = []
 
@@ -295,10 +296,10 @@ for j in range(np.shape(Valid_frames)[0]):
     # Create the probability image        
     for m in range(len(validsamples[0])):
         probimage[validsamples[0][m],validsamples[1][m]] = probabilities[m]
-
+"""
 # Plot the loss and validation loss         
 plt.close('all')
 plt.figure()
 plt.plot(losslist)  
-plt.plot(validlosslist)
+#plt.plot(validlosslist)
 
