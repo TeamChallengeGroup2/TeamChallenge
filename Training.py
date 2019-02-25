@@ -164,7 +164,29 @@ def make2Dpatches(samples, batch, images, patchsize, label):
         Y[i,label] = 1 
            
     return X, Y
-   
+
+def make2Dpatchestest(samples, batch, image, patchsize):
+    
+    halfsize = int(patchsize/2)
+    
+    X = np.empty([len(batch),patchsize,patchsize,1],dtype=np.float32)
+    Y = np.zeros((len(batch),2),dtype=np.int16)
+             
+    for i in range(len(batch)):
+        
+        patch = image[(samples[1][batch[i]]-halfsize):(samples[1][batch[i]]+halfsize),(samples[2][batch[i]]-halfsize):(samples[2][batch[i]]+halfsize)]
+
+        X[i,:,:,0] = patch  
+        
+    return X
+  
+# Input
+networkpath = r'Networks\trainednetwork.h5'
+minibatches = 80
+minibatchsize = 50 
+patchsize = 32
+trainnetwork = True
+
 # Shuffle the data to take a random subset for training later
 random.shuffle(output)
 
@@ -187,19 +209,27 @@ groundtruth = ESground+EDground
 frames=np.array(frames)
 groundtruth=np.array(groundtruth)
 
+#pad the images with zeros to allow patch extraction at all locations
+halfsize = int(patchsize/2)    
+frames = np.pad(frames,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
+groundtruth = np.pad(groundtruth,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
+    
+# Split up the data set into a training, test and validation set
 Train_frames = frames[:int(len(frames)/2)]
 Valid_frames = frames[int(len(frames)/2):int(len(frames)-len(frames)/4)]
 Test_frames = frames[int(len(frames)-len(frames)/4):]
 
-Train_frames=np.array(Train_frames)
-Valid_frames=np.array(Valid_frames)
+Train_frames = np.array(Train_frames)
+Valid_frames = np.array(Valid_frames)
+Test_frames = np.array(Test_frames)
 
 Train_labels = groundtruth[:int(len(groundtruth)/2)]
 Valid_labels = groundtruth[int(len(groundtruth)/2):int(len(groundtruth)-len(groundtruth)/4)]
 Test_labels = groundtruth[int(len(groundtruth)-len(groundtruth)/4):]
 
-Train_labels=np.array(Train_labels)
-Valid_labels=np.array(Valid_labels)
+Train_labels = np.array(Train_labels)
+Valid_labels = np.array(Valid_labels)
+Test_labels = np.array(Test_labels)
  
 # Training the network
 trainingsamples=np.where(Train_labels==3)
@@ -208,23 +238,67 @@ validsamples=np.where(Valid_labels==3)
 # Initialise the network
 cnn = buildLeNet()
 
-minibatches = 80
-minibatchsize = 50 
-patchsize = 32
+# Train the network
+if trainnetwork:
+    losslist = []
+    t0 = time.time()
 
-losslist = []
-t0 = time.time()
+    for i in range(minibatches):
+        # Take random trainingsamples and make the patches
+        batch = random.sample(list(range(len(trainingsamples[0]))), int(minibatchsize/2))
+        X, Y = make2Dpatches(trainingsamples,batch,frames,patchsize,1)
+        # Train the network and compute the loss
+        loss = cnn.train_on_batch(X,Y)
+        losslist.append(loss)
+        print('Batch: {}'.format(i))
+        print('Loss: {}'.format(loss))
 
-for i in range(minibatches):
-    # Select random training en validation samples and perform training 
-    batch = random.sample(list(range(len(trainingsamples[0]))), int(minibatchsize/2))
-    X, Y = make2Dpatches(trainingsamples,batch,frames,32,1)
-    loss = cnn.train_on_batch(X,Y)
-    losslist.append(loss)
-    print('Batch: {}'.format(i))
-    print('Loss: {}'.format(loss))
-   
-# Plot the loss function
+    # Save the network
+    cnn.save(networkpath)
+    
+else:
+    # Load the network
+    cnn = keras.models.load_model(networkpath)
+
+# Validation
+validlosslist = []
+
+# Loop through all frames in the validation set
+for j in range(np.shape(Valid_frames)[0]):
+
+    probimage = np.zeros(Valid_frames.shape)
+    probabilities = np.empty((0,))
+        
+    minibatchsize = 100 # Can be set as large as the memory allows
+    
+    for k in range(0,len(validsamples[0]),minibatchsize):
+        print('{}/{} samples labelled'.format(k,len(validsamples[0])))
+        
+        # Determine the batches for the validation
+        if i+minibatchsize < len(validsamples[0]):
+            valbatch = np.arange(k,k+minibatchsize)        
+        else:
+            valbatch = np.arange(k,len(validsamples[0]))        
+        
+        # Make the patches
+        Xval = make2Dpatchestest(validsamples,valbatch,Valid_frames[j],patchsize)
+        
+        # Compute the probability
+        prob = cnn.predict(Xval, batch_size=minibatchsize)
+        probabilities = np.concatenate((probabilities,prob[:,1]))
+    
+    # Compute the loss for the validation        
+    for l in range(minibatches):
+        validloss = cnn.test_on_batch(Xval,prob)
+        validlosslist.append(validloss)
+    
+    # Create the probability image        
+    for m in range(len(validsamples[0])):
+        probimage[validsamples[0][m],validsamples[1][m]] = probabilities[m]
+
+# Plot the loss and validation loss         
 plt.close('all')
 plt.figure()
 plt.plot(losslist)  
+plt.plot(validlosslist)
+
