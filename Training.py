@@ -22,7 +22,6 @@ import os
 import numpy as np
 import SimpleITK as sitk
 import keras
-import pickle
 import time
 import matplotlib.pyplot as plt
 import random
@@ -62,11 +61,6 @@ for i, name in enumerate(os.listdir('Data')):
     arr_ESframe= sitk.GetArrayFromImage(im_ESframe)
     arr_ESgt= sitk.GetArrayFromImage(im_ESgt)
     
-    #arr_EDframe=arr_EDframe[:,50:100,50:100]
-    #arr_EDgt=arr_EDgt[:,50:100,50:100]
-    #arr_ESframe=arr_ESframe[:,50:100,50:100]
-    #arr_ESgt=arr_ESgt[:,50:100,50:100]
-    
     NSlices=arr_EDframe.shape[0]
     
     #l=list with the patient number, the number of slices per frame, and the four 3D frames as arrays
@@ -97,52 +91,36 @@ for i in range(951):
 #---------------------------------------------------------------------------------------------------
 # DEFINING THE NEURAL NETWORK
         
-def buildLeNet():
-    
+def buildUnet():
+
     cnn = keras.models.Sequential()
-    
-    # 6 output filters in the convolution / number of kernels
-    # (5,5) kernel size
-    # 'relu' activation function
-    # input shape
-    # veel andere parameters mogelijk
-    layer0 = keras.layers.Conv2D(6, (5, 5), activation='relu', input_shape=(32, 32, 1))
+
+    layer0 = keras.layers.Conv2D(64, (3, 3), activation='relu', strides=1, input_shape=(32, 32, 1))
     cnn.add(layer0)
-    print(layer0.input_shape)
-    print(layer0.output_shape)
-    
-    layer1 = keras.layers.MaxPooling2D(pool_size=(2, 2))
+
+    layer1 = keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)
     cnn.add(layer1)
-    print(layer1.output_shape)
-    
-    layer2 = keras.layers.Conv2D(16, (5, 5), activation='tanh')
+
+    layer2 = keras.layers.Conv2D(128, (3, 3), activation='relu', strides=1)
     cnn.add(layer2)
-    print(layer2.output_shape)
-    
-    layer3 = keras.layers.MaxPooling2D(pool_size=(2, 2))
+
+    layer3 = keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)
     cnn.add(layer3)
-    print(layer3.output_shape)
-    
-    layer4 = keras.layers.Flatten() 
+
+    layer4 = keras.layers.Conv2D(64, (3, 3), activation='relu', strides=1)
     cnn.add(layer4)
-    print(layer4.output_shape)
-    
-    # Output array of size 120 (neurons)
-    layer5 = keras.layers.Dense(120, activation='tanh')
+
+    layer5 = keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)
     cnn.add(layer5)
-    print(layer5.output_shape)
-    
-    layer6 = keras.layers.Dense(84, activation='tanh')
+
+    layer6 = keras.layers.Flatten() 
     cnn.add(layer6)
-    print(layer6.output_shape)
-    
+
     layer7 = keras.layers.Dense(2, activation='softmax')
     cnn.add(layer7)
-    print(layer7.output_shape)
-    
-    # Adam optimizer
-    adam = keras.optimizers.adam(lr=0.001)
-    cnn.compile(loss='categorical_crossentropy', optimizer=adam)
+
+    sgd = keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=0.00005, nesterov=False)
+    cnn.compile(loss='categorical_crossentropy', optimizer=sgd)
     
     return cnn
 
@@ -174,7 +152,7 @@ def make2Dpatchestest(samples, batch, image, patchsize):
              
     for i in range(len(batch)):
         
-        patch = image[(samples[1][batch[i]]-halfsize):(samples[1][batch[i]]+halfsize),(samples[2][batch[i]]-halfsize):(samples[2][batch[i]]+halfsize)]
+        patch = image[(samples[0][batch[i]]-halfsize):(samples[0][batch[i]]+halfsize),(samples[1][batch[i]]-halfsize):(samples[1][batch[i]]+halfsize)]
 
         X[i,:,:,0] = patch  
         
@@ -233,10 +211,9 @@ Test_labels = np.array(Test_labels)
  
 # Training the network
 trainingsamples=np.where(Train_labels==3)
-validsamples=np.where(Valid_labels==3)
 
 # Initialise the network
-cnn = buildLeNet()
+cnn = buildUnet()
 
 # Train the network
 if trainnetwork:
@@ -260,14 +237,15 @@ else:
     # Load the network
     cnn = keras.models.load_model(networkpath)
     
-"""
 # Validation
 validlosslist = []
+probimage = np.zeros(Valid_frames.shape)
 
 # Loop through all frames in the validation set
 for j in range(np.shape(Valid_frames)[0]):
+    
+    validsamples=np.nonzero(Valid_labels[j])
 
-    probimage = np.zeros(Valid_frames.shape)
     probabilities = np.empty((0,))
         
     minibatchsize = 100 # Can be set as large as the memory allows
@@ -276,7 +254,7 @@ for j in range(np.shape(Valid_frames)[0]):
         print('{}/{} samples labelled'.format(k,len(validsamples[0])))
         
         # Determine the batches for the validation
-        if i+minibatchsize < len(validsamples[0]):
+        if k+minibatchsize < len(validsamples[0]):
             valbatch = np.arange(k,k+minibatchsize)        
         else:
             valbatch = np.arange(k,len(validsamples[0]))        
@@ -296,10 +274,10 @@ for j in range(np.shape(Valid_frames)[0]):
     # Create the probability image        
     for m in range(len(validsamples[0])):
         probimage[validsamples[0][m],validsamples[1][m]] = probabilities[m]
-"""
+
 # Plot the loss and validation loss         
 plt.close('all')
 plt.figure()
 plt.plot(losslist)  
-#plt.plot(validlosslist)
+plt.plot(validlosslist)
 
