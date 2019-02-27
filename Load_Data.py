@@ -36,7 +36,7 @@ def load3Ddata(path):
             #reading the end-diastolic 3d images:
                 if int(s)<10:
                     im_EDframe= sitk.ReadImage('{}\{}\{}_frame0{}.nii.gz'.format(path,name,name,s))
-                    im_EDgt=sitk.ReadImage('{}\{}\{}_frame0{}.nii.gz'.format(path,name,name,s))
+                    im_EDgt=sitk.ReadImage('{}\{}\{}_frame0{}_gt.nii.gz'.format(path,name,name,s))
                 else:
                     im_EDframe= sitk.ReadImage('{}\{}\{}_frame{}.nii.gz'.format(path,name,name,s))
                     im_EDgt=sitk.ReadImage('{}\{}\{}_frame{}_gt.nii.gz'.format(path,name,name,s))
@@ -47,7 +47,7 @@ def load3Ddata(path):
                 #reading the end-systolic 3d images:
                 if int(s)<10:
                     im_ESframe= sitk.ReadImage('{}\{}\{}_frame0{}.nii.gz'.format(path,name,name,s))
-                    im_ESgt=sitk.ReadImage('{}\{}\{}_frame0{}.nii.gz'.format(path,name,name,s))
+                    im_ESgt=sitk.ReadImage('{}\{}\{}_frame0{}_gt.nii.gz'.format(path,name,name,s))
                 else:
                     im_ESframe= sitk.ReadImage('{}\{}\{}_frame{}.nii.gz'.format(path,name,name,s))
                     im_ESgt=sitk.ReadImage('{}\{}\{}_frame{}_gt.nii.gz'.format(path,name,name,s))
