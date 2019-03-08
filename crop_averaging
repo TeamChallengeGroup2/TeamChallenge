@@ -66,7 +66,7 @@ def cropROI(arrayin, slicenr):
     #input: an array with indices [slicenr, imageX, imageY]
     # slicenr: averaging over this number of slices
     
-    LVradius=22 #the radius used in frst, which should be the radius of the LV in the top image
+    LVradius=20 #the radius used in frst, which should be the radius of the LV in the top image
     cropdiam=63 #the length in X and Y direction of the cropped image
     multi_mindist = []
     multi_circles = []
@@ -79,7 +79,7 @@ def cropROI(arrayin, slicenr):
 
         im = np.array((topslice/np.amax(topslice)) * 255, dtype = np.uint8)
     
-        circles=cv2.HoughCircles(im, cv2.HOUGH_GRADIENT, 1, 70, param1=40, param2=25, minRadius=LVradius-15, maxRadius=LVradius+15)
+        circles=cv2.HoughCircles(im, cv2.HOUGH_GRADIENT, 1, 70, param1=40, param2=25, minRadius=LVradius-14, maxRadius=LVradius+10)
         multi_circles.append(circles)
 
     #function to calculate distance from coordinates of HoughCircles to center of the image
