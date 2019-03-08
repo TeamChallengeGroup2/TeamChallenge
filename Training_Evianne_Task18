@@ -1,0 +1,447 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar  8 15:06:57 2019
+
+@author: Evianne
+"""
+
+"""
+This code gives as output the slices of end-diastolic and end-systolic frames of 100 patients, including both the initial and segmented images.
+To know how many slices (N) the patient number X has, use:
+N = slice_count[X] - slice_count[X-1]
+To get his slice number n (n being a number between 1 and N, including both), use:
+Y = output[slice_count[X-1] + n-1]
+Then:
+Y[0] = patient number
+Y[1] = slice number
+Y[2] = ED 2D original image
+Y[3] = ED 2D ground truth
+Y[4] = ES 2D original image
+Y[5] = ES 2D ground truth
+"""
+
+import os
+import numpy as np
+import SimpleITK as sitk
+import matplotlib.pyplot as plt
+import cv2
+import math 
+import keras
+import time
+import random
+
+def loadData():
+    l=[]
+    for i, name in enumerate(os.listdir('Data')):
+        data = open('Data\{}\Info.cfg'.format(name), 'r')
+        
+        ED=data.readline()    #end-diastolic frame information
+        for s in ED.split():
+            if s.isdigit():   #end-diastolic frame number
+                #reading the end-diastolic 3d images:
+                if int(s)<10:
+                    im_EDframe= sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
+                    im_EDgt=sitk.ReadImage('Data\{}\{}_frame0{}_gt.nii.gz'.format(name,name,s))
+                else:
+                    im_EDframe= sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
+                    im_EDgt=sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
+                    
+        ES=data.readline()    #end-systolic frame information
+        for s in ES.split():
+            if s.isdigit():   #end-systolic frame number
+                #reading the end-systolic 3d images:
+                if int(s)<10:
+                    im_ESframe= sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
+                    im_ESgt=sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
+                else:
+                    im_ESframe= sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
+                    im_ESgt=sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
+                    
+        #Converting the 3d images into 3 dimensional arrays:        
+        arr_EDframe= sitk.GetArrayFromImage(im_EDframe)
+        arr_EDgt= sitk.GetArrayFromImage(im_EDgt)
+        arr_ESframe= sitk.GetArrayFromImage(im_ESframe)
+        arr_ESgt= sitk.GetArrayFromImage(im_ESgt)
+        
+        NSlices=arr_EDframe.shape[0]
+        
+        #l=list with the patient number, the number of slices per frame, and the four 3D frames as arrays
+        l.append([i+1, NSlices,arr_EDframe,arr_EDgt,arr_ESframe,arr_ESgt])
+        
+        
+    #output=list with the patient number, the slices number, and the four 2D slices as arrays
+    slice_count=[0]
+    output=[]
+    for i in range(100):
+        n=l[i][1]
+        for h in range(n):
+            output.append([l[i][0],h+1,l[i][2][h],l[i][3][h],l[i][4][h],l[i][5][h]])
+        slice_count.append(slice_count[i]+n)
+        
+    for i in range(951):
+        if output[i][2].shape[0]<512:    #the bigger images have size 512x428
+            L0=512-output[i][2].shape[0]
+            L1=428-output[i][2].shape[1]
+            output[i][2]=np.pad(output[i][2], ((0,L0),(0,L1)), 'constant', constant_values=0)
+            output[i][3]=np.pad(output[i][3], ((0,L0),(0,L1)), 'constant', constant_values=0)
+            output[i][4]=np.pad(output[i][4], ((0,L0),(0,L1)), 'constant', constant_values=0)
+            output[i][5]=np.pad(output[i][5], ((0,L0),(0,L1)), 'constant', constant_values=0)
+    
+    return l, output
+
+def cropROI(arrayin,gtin, slicenr):
+    #input: an array with indices [slicenr, imageX, imageY]
+    # slicenr: averaging over this number of slices
+    
+    LVradius=20 #the radius used in frst, which should be the radius of the LV in the top image
+    cropdiam=63 #the length in X and Y direction of the cropped image
+    multi_mindist = []
+    multi_circles = []
+    sumdist1 = 0
+    sumdist2 = 0
+    
+    for i in range(slicenr):
+        topslice=arrayin[i,:,:]
+        center=[topslice.shape[1]/2,topslice.shape[0]/2]        #find coordinates of center of image
+
+        im = np.array((topslice/np.amax(topslice)) * 255, dtype = np.uint8)
+    
+        circles=cv2.HoughCircles(im, cv2.HOUGH_GRADIENT, 1, 70, param1=40, param2=25, minRadius=LVradius-14, maxRadius=LVradius+10)
+        multi_circles.append(circles)
+
+    #function to calculate distance from coordinates of HoughCircles to center of the image
+        def calculateDistance(x1,y1,x2,y2):  
+            dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)  
+            return dist
+
+    #calculate distances and add to list dist
+        dist=[]
+        for j in range(circles.shape[1]):
+            d=calculateDistance(circles[0,j,0],circles[0,j,1],center[0],center[1])
+            dist.append(d)
+
+        mindist=np.argmin(dist)         #find index of minimal distance
+        multi_mindist.append(mindist)
+        sumdist1 += int(circles[0,mindist,1])
+        sumdist2 += int(circles[0,mindist,0])
+
+    sumdist1 = int(sumdist1/(slicenr))
+    sumdist2 = int(sumdist2/(slicenr))
+#    plt.figure(1)
+#    plt.imshow(im, cmap='gray')
+    
+    cropped_frame = []
+    cropped_gt = []
+    
+    for j in range(arrayin.shape[0]):
+        topslice = arrayin[j,:,:]
+        topslicegt = gtin[j,:,:]
+        
+        im = np.array((topslice/np.amax(topslice)) * 255, dtype = np.uint8)
+        imgt = np.array((topslicegt/np.amax(topslicegt)) * 255, dtype = np.uint8)
+    
+        croppedim=im[sumdist1-cropdiam:sumdist1+cropdiam,sumdist2-cropdiam:sumdist2+cropdiam]
+        cropped_frame.append(croppedim)
+        
+        croppedgt = imgt[sumdist1-cropdiam:sumdist1+cropdiam,sumdist2-cropdiam:sumdist2+cropdiam]
+        cropped_gt.append(croppedgt)
+    #croppedgt=gt[sumdist1-cropdiam:sumdist1+cropdiam,sumdist2-cropdiam:sumdist2+cropdiam]
+      
+    return cropped_frame, cropped_gt
+
+l, output=loadData()
+#cropped_images = []
+#for j in range(100):
+#    patient1=l[j]
+#    EDpatient1=patient1[2]
+#    cropped_im=cropROI(EDpatient1,4)
+#    cropped_images.append(cropped_im)
+#    plt.figure(2)
+#    plt.imshow(cropped_im,cmap='gray')
+#    plt.show()
+#    print(j)
+  
+##output=list with the patient number, the slices number, and the four 2D slices as arrays
+#slice_count=[0]
+#output=[]
+#for i in range(100):
+#    n=l[i][1]
+#    for h in range(n):
+#        output.append([l[i][0],h+1,l[i][2][h],l[i][3][h],l[i][4][h],l[i][5][h]])
+#        slice_count.append(slice_count[i]+n)
+#        
+#
+#for i in range(951):
+#    if output[i][2].shape[0]<512:    #the bigger images have size 512x428
+#        L0=512-output[i][2].shape[0]
+#        L1=428-output[i][2].shape[1]
+#        output[i][2]=np.pad(output[i][2], ((0,L0),(0,L1)), 'constant', constant_values=0)
+#        output[i][3]=np.pad(output[i][3], ((0,L0),(0,L1)), 'constant', constant_values=0)
+#        output[i][4]=np.pad(output[i][4], ((0,L0),(0,L1)), 'constant', constant_values=0)
+#        output[i][5]=np.pad(output[i][5], ((0,L0),(0,L1)), 'constant', constant_values=0)
+#
+#      
+
+#---------------------------------------------------------------------------------------------------
+# DEFINING THE NEURAL NETWORK
+        
+def buildUnet():
+
+    cnn = keras.models.Sequential()
+
+    layer0 = keras.layers.Conv2D(64, (3, 3), activation='relu', strides=1, input_shape=(32, 32, 1))
+    cnn.add(layer0)
+
+    layer1 = keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)
+    cnn.add(layer1)
+
+    layer2 = keras.layers.Conv2D(128, (3, 3), activation='relu', strides=1)
+    cnn.add(layer2)
+
+    layer3 = keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)
+    cnn.add(layer3)
+
+    layer4 = keras.layers.Conv2D(64, (3, 3), activation='relu', strides=1)
+    cnn.add(layer4)
+
+    layer5 = keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)
+    cnn.add(layer5)
+
+    layer6 = keras.layers.Flatten() 
+    cnn.add(layer6)
+
+    layer7 = keras.layers.Dense(2, activation='softmax')
+    cnn.add(layer7)
+
+    sgd = keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=0.00005, nesterov=False)
+    cnn.compile(loss='categorical_crossentropy', optimizer=sgd)
+    
+    return cnn
+
+#-------------------------------------------------------------------------------------------------
+# TRAINING THE NETWORK
+    
+def make2Dpatches(samples, batch, images, patchsize, label):
+    
+    halfsize = int(patchsize/2)
+    
+    X = np.empty([len(batch),patchsize,patchsize,1],dtype=np.float32)
+    Y = np.zeros((len(batch),2),dtype=np.int16) 
+        
+    for i in range(len(batch)):
+        
+        patch = images[samples[0][batch[i]],(samples[1][batch[i]]-halfsize):(samples[1][batch[i]]+halfsize),(samples[2][batch[i]]-halfsize):(samples[2][batch[i]]+halfsize)]
+       
+        X[i,:,:,0] = patch
+        Y[i,label] = 1 
+           
+    return X, Y
+
+def make2Dpatchestest(samples, batch, image, patchsize):
+    
+    halfsize = int(patchsize/2)
+    
+    X = np.empty([len(batch),patchsize,patchsize,1],dtype=np.float32)
+    Y = np.zeros((len(batch),2),dtype=np.int16)
+             
+    for i in range(len(batch)):
+        
+        patch = image[(samples[0][batch[i]]-halfsize):(samples[0][batch[i]]+halfsize),(samples[1][batch[i]]-halfsize):(samples[1][batch[i]]+halfsize)]
+
+        X[i,:,:,0] = patch  
+        
+    return X
+  
+# Input
+networkpath = r'Networks\trainednetwork.h5'
+minibatches = 20
+minibatchsize = 50 
+patchsize = 32
+trainnetwork = True
+
+# Shuffle the data to take a random subset for training later
+random.shuffle(l)
+
+# Split the list l into a list containing all ED frames
+EDframes = []
+EDground = []
+ESframes = []
+ESground = []
+
+for i in range(len(l)):
+    EDframes.append(l[i][2])
+    EDground.append(l[i][3])
+    ESframes.append(l[i][4])
+    ESground.append(l[i][5])
+
+# Take the ES frames and ED frames 
+frames = ESframes+EDframes
+groundtruth = ESground+EDground
+
+frames=np.array(frames)
+groundtruth=np.array(groundtruth)
+
+cropped_frames = []
+cropped_frm=[]
+cropped_groundtruth=[]
+for j in range(100):
+#    patient=l[j]
+#    EDpatient=patient[2]
+    frame = frames[j]
+    gt = groundtruth[j]
+#    for k in range(frame.shape[0]):
+#        img = frame[k]
+#        cropped_im=cropROI(img,4)
+#        cropped_frm.append(cropped_im)
+    cropped_frm, cropped_gt = cropROI(frame,gt,4)
+    cropped_frames.append(cropped_frm)
+    cropped_groundtruth.append(cropped_gt)
+    cropped_frm=[]
+
+#    plt.figure(2)
+#    plt.imshow(cropped_frm,cmap='gray')
+    #cropped_gt=cropROI()
+#    plt.figure(2)
+#    plt.imshow(cropped_gt[1])
+    cropped_gt = []
+#    plt.show()
+    print(j)
+
+cropped_frames = np.array(cropped_frames)
+cropped_groundtruth = np.array(cropped_groundtruth)
+cropped_images = []
+cropped_gtimages = []
+#for i in range(cropped_frames.shape[0]):
+#    for j in range(len(cropped_frames[i])):
+#        cropped_images.append(cropped_frames[i][j])
+#        cropped_gtimages.append(cropped_groundtruth[i][j])
+        
+#cropped_frames = np.array(cropped_images)
+#cropped_groundtruth = np.array(cropped_gtimages)
+
+###pad the images with zeros to allow patch extraction at all locations
+#halfsize = int(patchsize/2)    
+#cropped_frames = np.pad(cropped_frames,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
+#cropped_groundtruth = np.pad(cropped_groundtruth,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
+    
+# Split up the data set into a training, test and validation set
+Train_frames = cropped_frames[:int(len(cropped_frames)/2)]
+Valid_frames = cropped_frames[int(len(cropped_frames)/2):int(len(cropped_frames)-len(cropped_frames)/4)]
+Test_frames = cropped_frames[int(len(cropped_frames)-len(cropped_frames)/4):]
+
+Train_frames = np.array(Train_frames)
+Valid_frames = np.array(Valid_frames)
+Test_frames = np.array(Test_frames)
+
+Train_labels = cropped_groundtruth[:int(len(cropped_groundtruth)/2)]
+Valid_labels = cropped_groundtruth[int(len(cropped_groundtruth)/2):int(len(cropped_groundtruth)-len(cropped_groundtruth)/4)]
+Test_labels = cropped_groundtruth[int(len(cropped_groundtruth)-len(cropped_groundtruth)/4):]
+
+Train_labels = np.array(Train_labels)
+Valid_labels = np.array(Valid_labels)
+Test_labels = np.array(Test_labels)
+
+#Train_labels = Train_labels.astype(float)
+#pd.to_numeric(Train_labels)
+##
+##
+#Train_frames = np.array(Train_frames)
+#Valid_frames = np.array(Valid_frames)
+#Test_frames = np.array(Test_frames)
+#Train_labels = np.array(Train_labels)
+#Valid_labels = np.array(Valid_labels)
+#Test_labels = np.array(Test_labels)
+# 
+# Training the network
+trainingsamples=np.where(Train_labels==3)
+
+# Initialise the network
+cnn = buildUnet()
+
+positivesamples = np.nonzero(Train_labels)
+#trainingsamples = np.nonzero(Train_labels)
+#negativesamples = Train_labels-positivesamples
+negativesamples = np.nonzero(Train_frames-Train_labels)
+#print(len(positivesamples[0]))
+#print(len(negativesamples[0]))
+
+# Train the network
+if trainnetwork:
+    losslist = []
+    t0 = time.time()
+
+    for i in range(minibatches):
+        # Take random trainingsamples and make the patches
+        posbatch = random.sample(list(range(len(positivesamples[0]))),int(minibatchsize/2))
+        negbatch = random.sample(list(range(len(negativesamples[0]))),int(minibatchsize/2))
+        
+        Xpos, Ypos = make2Dpatches(positivesamples,posbatch,Train_frames,patchsize,1) # double patchsize for rotation
+        Xneg, Yneg = make2Dpatches(negativesamples,negbatch,Train_frames,patchsize,0)   # it is cropped later
+        
+        Xtrain = np.vstack((Xpos,Xneg))
+        Ytrain = np.vstack((Ypos,Yneg))
+
+        loss = cnn.train_on_batch(Xtrain,Ytrain)
+        losslist.append(loss)
+        print('Batch: {}'.format(i))
+        print('Loss: {}'.format(loss))
+        
+#        batch = random.sample(list(range(len(trainingsamples[0]))), int(minibatchsize/2))
+#        X, Y = make2Dpatches(trainingsamples,batch,cropped_frames,patchsize,1)
+#        # Train the network and compute the loss
+#        loss = cnn.train_on_batch(X,Y)
+#        losslist.append(loss)
+#        print('Batch: {}'.format(i))
+#        print('Loss: {}'.format(loss))
+
+    # Save the network
+    cnn.save(networkpath)
+    
+else:
+    # Load the network
+    cnn = keras.models.load_model(networkpath)
+    
+## Validation
+#validlosslist = []
+#probimage = np.zeros(Valid_frames.shape)
+
+
+# Loop through all frames in the validation set
+#for j in range(np.shape(Valid_frames)[0]):
+#    
+#    validsamples=np.nonzero(Valid_labels[j])
+#
+#    probabilities = np.empty((0,))
+#        
+#    minibatchsize = 100 # Can be set as large as the memory allows
+#    
+#    for k in range(0,len(validsamples[0]),minibatchsize):
+#        print('{}/{} samples labelled'.format(k,len(validsamples[0])))
+#        
+#        # Determine the batches for the validation
+#        if k+minibatchsize < len(validsamples[0]):
+#            valbatch = np.arange(k,k+minibatchsize)        
+#        else:
+#            valbatch = np.arange(k,len(validsamples[0]))        
+#        
+#        # Make the patches
+#        Xval = make2Dpatchestest(validsamples,valbatch,Valid_frames[j],patchsize)
+#        
+#        # Compute the probability
+#        prob = cnn.predict(Xval, batch_size=minibatchsize)
+#        probabilities = np.concatenate((probabilities,prob[:,1]))
+#    
+#    # Compute the loss for the validation        
+#    for l in range(minibatches):
+#        validloss = cnn.test_on_batch(Xval,prob)
+#        validlosslist.append(validloss)
+#    
+#    # Create the probability image        
+#    for m in range(len(validsamples[0])):
+#        probimage[validsamples[0][m],validsamples[1][m]] = probabilities[m]
+#
+## Plot the loss and validation loss         
+#plt.close('all')
+#plt.figure()
+#plt.plot(losslist)  
+#plt.plot(validlosslist)
