@@ -241,8 +241,12 @@ for i in range(len(output)):
 frames = ESframes+EDframes
 groundtruth = ESground+EDground
 
+print(frames[0].shape)
+print(groundtruth[0].shape)
+
 frames=np.array(frames)
 groundtruth=np.array(groundtruth)
+
 
 #pad the images with zeros to allow patch extraction at all locations
 halfsize = int(patchsize/2)    
@@ -265,13 +269,14 @@ Test_labels = groundtruth[int(len(groundtruth)-len(groundtruth)/4):]
 Train_labels = np.array(Train_labels)
 Valid_labels = np.array(Valid_labels)
 Test_labels = np.array(Test_labels)
- 
-# Training the network
-trainingsamples=np.where(Train_labels==3)
 
 # Initialise the network
 cnn = buildUnet()
-print('Network initialised')
+
+# Training the network
+trainingsamples=np.where(Train_labels==3)
+positivesamples = np.nonzero(Train_labels)
+negativesamples = np.nonzero(Train_frames-Train_labels)
 
 # Train the network
 if trainnetwork:
@@ -279,15 +284,22 @@ if trainnetwork:
     t0 = time.time()
 
     for i in range(minibatches):
-        # Take random trainingsamples and make the patches
-        batch = random.sample(list(range(len(trainingsamples[0]))), int(minibatchsize/2))
-        X, Y = make2Dpatches(trainingsamples,batch,frames,patchsize,1)
-        # Train the network and compute the loss
-        loss = cnn.train_on_batch(X,Y)
+#        # Take random trainingsamples and make the patches
+        posbatch = random.sample(list(range(len(positivesamples[0]))),int(minibatchsize/2))
+        negbatch = random.sample(list(range(len(negativesamples[0]))),int(minibatchsize/2))
+        
+        Xpos, Ypos = make2Dpatches(positivesamples,posbatch,Train_frames,patchsize,1) # double patchsize for rotation
+        Xneg, Yneg = make2Dpatches(negativesamples,negbatch,Train_frames,patchsize,0)   # it is cropped later
+        
+        Xtrain = np.vstack((Xpos,Xneg))
+        Ytrain = np.vstack((Ypos,Yneg))
+
+        loss = cnn.train_on_batch(Xtrain,Ytrain)
         losslist.append(loss)
         print('Batch: {}'.format(i))
         print('Loss: {}'.format(loss))
-
+        
+#        
     # Save the network
     cnn.save(networkpath)
     
@@ -295,47 +307,3 @@ else:
     # Load the network
     cnn = keras.models.load_model(networkpath)
     
-# Validation
-validlosslist = []
-probimage = np.zeros(Valid_frames.shape)
-
-# Loop through all frames in the validation set
-for j in range(np.shape(Valid_frames)[0]):
-    
-    validsamples=np.nonzero(Valid_labels[j])
-
-    probabilities = np.empty((0,))
-        
-    minibatchsize = 100 # Can be set as large as the memory allows
-    
-    for k in range(0,len(validsamples[0]),minibatchsize):
-        print('{}/{} samples labelled'.format(k,len(validsamples[0])))
-        
-        # Determine the batches for the validation
-        if k+minibatchsize < len(validsamples[0]):
-            valbatch = np.arange(k,k+minibatchsize)        
-        else:
-            valbatch = np.arange(k,len(validsamples[0]))        
-        
-        # Make the patches
-        Xval = make2Dpatchestest(validsamples,valbatch,Valid_frames[j],patchsize)
-        
-        # Compute the probability
-        prob = cnn.predict(Xval, batch_size=minibatchsize)
-        probabilities = np.concatenate((probabilities,prob[:,1]))
-    
-    # Compute the loss for the validation        
-    for l in range(minibatches):
-        validloss = cnn.test_on_batch(Xval,prob)
-        validlosslist.append(validloss)
-    
-    # Create the probability image        
-    for m in range(len(validsamples[0])):
-        probimage[validsamples[0][m],validsamples[1][m]] = probabilities[m]
-
-# Plot the loss and validation loss         
-plt.close('all')
-plt.figure()
-plt.plot(losslist)  
-plt.plot(validlosslist)
-
