@@ -190,7 +190,7 @@ def buildUnet():
     cnn.add(layer9)
 
     adam = keras.optimizers.adam(lr=0.0001)
-    cnn.compile(loss='categorical_crossentropy', optimizer=adam)
+    cnn.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
      
     return cnn
 
@@ -290,9 +290,14 @@ cnn = buildUnet()
 positivesamples = np.nonzero(Train_labels)
 negativesamples = np.nonzero(Train_frames-Train_labels)
 
+validsamples=np.where(Valid_labels==3)
+
+
+
 # Train the network
 if trainnetwork:
-    losslist = []
+    trainlosslist = []
+    validlosslist = []
     t0 = time.time()
 
     for i in range(minibatches):
@@ -300,24 +305,32 @@ if trainnetwork:
         posbatch = random.sample(list(range(len(positivesamples[0]))),int(minibatchsize/2))
         negbatch = random.sample(list(range(len(negativesamples[0]))),int(minibatchsize/2))
         
+        valid_batch = random.sample(list(range(len(validsamples[0]))), int(minibatchsize/2))
+        
         Xpos, Ypos = make2Dpatches(positivesamples,posbatch,Train_frames,patchsize,1) # double patchsize for rotation
         Xneg, Yneg = make2Dpatches(negativesamples,negbatch,Train_frames,patchsize,0)   # it is cropped later
+        
+        x_valid, y_valid = make2Dpatches(validsamples, valid_batch, Valid_frames, patchsize, 1)
         
         Xtrain = np.vstack((Xpos,Xneg))
         Ytrain = np.vstack((Ypos,Yneg))
 
-        loss = cnn.train_on_batch(Xtrain,Ytrain)
-        losslist.append(loss)
+        train_loss = cnn.train_on_batch(Xtrain,Ytrain)
+        valid_loss = cnn.test_on_batch(x_valid, y_valid)
+        trainlosslist.append(train_loss)
+        validlosslist.append(valid_loss)
         print('Batch: {}'.format(i))
-        print('Loss: {}'.format(loss))
-               
+        print('Train Loss: {} \t Train Accuracy: {}'.format(train_loss[0], train_loss[1]))
+        print('Valid loss: {} \t Valid Accuracy: {}'.format(valid_loss[0], valid_loss[1]))
+                
     # Save the network
     cnn.save(networkpath)
-    
+    t1 = time.time()
+    print('\nTraining time: {} seconds'.format(t1 - t0))
 else:
     # Load the network
     cnn = keras.models.load_model(networkpath)
-    
+'''
 #---------------------------------------------------------------------------------    
 
 # VALIDATION
@@ -334,7 +347,7 @@ for j in range(np.shape(Valid_frames)[0]):
     probabilities = np.empty((0,))
         
     # Define the minibatchsize, it can be as large as the memory allows
-    minibatchsize = 100 
+    minibatchsize = 100
     
     # Loop through all samples
     for k in range(0,len(validsamples[0]),minibatchsize):
@@ -367,3 +380,4 @@ plt.close('all')
 plt.figure()
 plt.plot(losslist)  
 plt.plot(validlosslist)
+'''
