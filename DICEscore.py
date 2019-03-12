@@ -1,7 +1,7 @@
 import mumpy as np
 
 
-def define_TP_FP_FN(Networks, val_set, threshold, masks, groundtruth):
+def DSC(val_set, threshold, groundtruth):
     All_TP = []
     All_FP = []
     All_FN = []
