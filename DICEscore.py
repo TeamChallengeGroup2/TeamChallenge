@@ -1,4 +1,4 @@
-import mumpy as np
+import numpy as np
 
 
 def DSC(val_set, threshold, groundtruth):
