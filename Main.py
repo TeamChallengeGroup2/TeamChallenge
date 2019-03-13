@@ -10,11 +10,13 @@ import numpy as np
 import keras
 import time
 import random
+import cv2
+import matplotlib.pyplot as plt
 
 from Data import loadData
 from Cropping import cropROI
 from Network import buildUnet
-from Patches import make2Dpatches
+from Patches import make2Dpatches, make2Dpatchestest
 
 # -----------------------------------------------------------------------------
 # INPUT
@@ -22,7 +24,8 @@ networkpath = r'trainednetwork.h5'
 minibatches = 50
 minibatchsize = 200
 patchsize = 32
-trainnetwork = True
+trainnetwork = False
+validation = True
 
 # -----------------------------------------------------------------------------
 # LOADING THE DATA
@@ -120,6 +123,7 @@ validsamples=np.where(Valid_labels==3)
 if trainnetwork:
     trainlosslist = []
     validlosslist = []
+    probabilities = np.empty((0,))
     t0 = time.time()
 
     for i in range(minibatches):
@@ -141,23 +145,23 @@ if trainnetwork:
 
         # Perform the training and compute the training loss
         train_loss = cnn.train_on_batch(Xtrain,Ytrain)
-        trainlosslist.append(train_loss)
+        trainlosslist.append(train_loss[0])
         
         # Perform the validation and compute the validation loss
         valid_loss = cnn.test_on_batch(x_valid, y_valid)
-        validlosslist.append(valid_loss)
+        validlosslist.append(valid_loss[0])
         
         print('Batch: {}'.format(i))
         print('Train Loss: {} \t Train Accuracy: {}'.format(train_loss[0], train_loss[1]))
         print('Valid loss: {} \t Valid Accuracy: {}'.format(valid_loss[0], valid_loss[1]))
-           
+        
     # Save the network
     cnn.save(networkpath)
     t1 = time.time()
     print('\nTraining time: {} seconds'.format(t1 - t0))
     
     plt.figure()
-    plt.plot(losslist)
+    plt.plot(trainlosslist)
     plt.plot(validlosslist)
     
 else:
@@ -165,3 +169,43 @@ else:
     cnn = keras.models.load_model(networkpath)
     
 print ('Training is finished')
+
+# -----------------------------------------------------------------------------
+# VALIDATION
+
+if validation:
+    probimage = np.zeros(Valid_frames.shape)
+
+    # Loop through all frames in the validation set
+    for j in range(np.shape(Valid_frames)[0]):
+    
+        # Take all labels of the Left ventricle (3) or all structures together
+        validsamples=np.where(Valid_labels[j]==3)
+        probabilities = np.empty((0,))
+        
+        # Define the minibatchsize, it can be as large as the memory allows
+        minibatchsize = 100
+    
+        # Loop through all samples
+        for k in range(0,len(validsamples[0]),minibatchsize):
+            print('{}/{} samples labelled'.format(k,len(validsamples[0])))
+        
+            # Determine the batches for the validation
+            if k+minibatchsize < len(validsamples[0]):
+                valbatch = np.arange(k,k+minibatchsize)        
+            else:
+                valbatch = np.arange(k,len(validsamples[0]))        
+                    
+            # Make the patches
+            Xval = make2Dpatchestest(validsamples,valbatch,Valid_frames[j],patchsize)
+        
+            # Compute the probability
+            prob = cnn.predict(Xval, batch_size=minibatchsize)
+            probabilities = np.concatenate((probabilities,prob[:,1]))
+    
+        # Create the probability image        
+        for m in range(len(validsamples[0])):
+            probimage[j,validsamples[0][m],validsamples[1][m]] = probabilities[m]
+            
+            # Convert the probability to a binary mask with threshold 0.5
+            threshold,mask = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)
