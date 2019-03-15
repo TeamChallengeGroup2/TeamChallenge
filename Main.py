@@ -17,10 +17,12 @@ from Data import loadData
 from Cropping import cropROI
 from Network import buildUnet
 from Patches import make2Dpatches, make2Dpatchestest
+from DICEscore import DSC
 
 # -----------------------------------------------------------------------------
 # INPUT
-networkpath = r'trainednetwork.h5'
+networkpath = r'C:\Users\s141352\Documents\GitHub\TeamChallenge\trainednetwork.h5'
+datapath= r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2'
 minibatches = 50
 minibatchsize = 200
 patchsize = 32
@@ -29,7 +31,7 @@ validation = True
 
 # -----------------------------------------------------------------------------
 # LOADING THE DATA
-data=loadData()
+data=loadData(datapath)
 print('Data Loaded')
 
 # -----------------------------------------------------------------------------
@@ -175,9 +177,11 @@ print ('Training is finished')
 
 if validation:
     probimage = np.zeros(Valid_frames.shape)
+    mask = np.zeros(Valid_frames.shape)
 
     # Loop through all frames in the validation set
     for j in range(np.shape(Valid_frames)[0]):
+        print('{} frames labelled'.format(j))
     
         # Take all labels of the Left ventricle (3) or all structures together
         validsamples=np.where(Valid_labels[j]==3)
@@ -188,7 +192,7 @@ if validation:
     
         # Loop through all samples
         for k in range(0,len(validsamples[0]),minibatchsize):
-            print('{}/{} samples labelled'.format(k,len(validsamples[0])))
+            #print('{}/{} samples labelled'.format(k,len(validsamples[0])))
         
             # Determine the batches for the validation
             if k+minibatchsize < len(validsamples[0]):
@@ -208,4 +212,6 @@ if validation:
             probimage[j,validsamples[0][m],validsamples[1][m]] = probabilities[m]
             
             # Convert the probability to a binary mask with threshold 0.5
-            threshold,mask = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)
+            threshold,mask[j,:,:] = cv2.threshold(probimage[j,:,:],0.5,1.0,cv2.THRESH_BINARY)
+        
+    Dice_Scores=DSC(mask,Valid_labels)

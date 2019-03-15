@@ -33,7 +33,6 @@ def make2Dpatchestest(samples, batch, image, patchsize):
     halfsize = int(patchsize/2)
     
     X = np.empty([len(batch),patchsize,patchsize,1],dtype=np.float32)
-    Y = np.zeros((len(batch),2),dtype=np.int16)
              
     for i in range(len(batch)):
         

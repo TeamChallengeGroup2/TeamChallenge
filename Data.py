@@ -9,10 +9,10 @@ Team 2
 import os
 import SimpleITK as sitk
 
-def loadData():
+def loadData(datapath):
     # This function loads the data and save it into a list with the patient 
     # number, the number of slices per frame, and the four 3D frames as arrays
-    
+    os.chdir(datapath)
     l=[]
     for i, name in enumerate(os.listdir('Data')):
         data = open('Data\{}\Info.cfg'.format(name), 'r')
