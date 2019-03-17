@@ -17,21 +17,19 @@ from Data import loadData
 from Cropping import cropROI
 from Network import buildUnet
 from Patches import make2Dpatches, make2Dpatchestest
-from DICEscore import DSC
 
 # -----------------------------------------------------------------------------
 # INPUT
-networkpath = r'C:\Users\s141352\Documents\GitHub\TeamChallenge\trainednetwork.h5'
-datapath= r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2'
-minibatches = 50
-minibatchsize = 200
+networkpath = r'trainednetwork_batchnorm.h5'
+minibatches = 1000
+minibatchsize = 100
 patchsize = 32
 trainnetwork = False
 validation = True
 
 # -----------------------------------------------------------------------------
 # LOADING THE DATA
-data=loadData(datapath)
+data=loadData()
 print('Data Loaded')
 
 # -----------------------------------------------------------------------------
@@ -175,14 +173,50 @@ print ('Training is finished')
 # -----------------------------------------------------------------------------
 # VALIDATION
 
+def plotResults(Valid_frames, Valid_labels, mask):
+    
+    plt.figure()
+    for i in range(1, len(Valid_frames), 3):
+        plt.subplot(len(Valid_frames), 3, i)
+        plt.imshow(Valid_frames[i-1], cmap='gray')
+        plt.subplot(len(Valid_frames), 3, i+1)
+        plt.imshow(Valid_frames[i], cmap='gray')
+        plt.subplot(len(Valid_frames), 3, i+2)
+        plt.imshow(Valid_frames[i+1], cmap='gray')
+        
+def calculateDice(masks, Valid_labels):
+    
+    
+    dices=[]
+    
+    for i in range(len(Valid_labels)):
+        gt=np.where(Valid_labels[i]==3, 1, 0)
+        dice=np.sum(mask[i,gt==1])*2.0/(np.sum(mask[i])+np.sum(gt))
+        dices.append(dice)
+    
+    
+    
+    return dices
+
+
+
 if validation:
+    
+    validsamples=50
+    
+    sample_idx=random.sample(range(len(Valid_frames)), validsamples)
+    
+    Valid_frames=Valid_frames[sample_idx]
+    Valid_labels=Valid_labels[sample_idx]
+    
+    
     probimage = np.zeros(Valid_frames.shape)
-    mask = np.zeros(Valid_frames.shape)
 
     # Loop through all frames in the validation set
     for j in range(np.shape(Valid_frames)[0]):
-        print('{} frames labelled'.format(j))
-    
+        
+        print('Image {} of {}'. format(j, np.shape(Valid_frames)[0]))
+        
         # Take all labels of the Left ventricle (3) or all structures together
         validsamples=np.where(Valid_labels[j]==3)
         probabilities = np.empty((0,))
@@ -192,7 +226,7 @@ if validation:
     
         # Loop through all samples
         for k in range(0,len(validsamples[0]),minibatchsize):
-            #print('{}/{} samples labelled'.format(k,len(validsamples[0])))
+            print('{}/{} samples labelled'.format(k,len(validsamples[0])))
         
             # Determine the batches for the validation
             if k+minibatchsize < len(validsamples[0]):
@@ -212,6 +246,7 @@ if validation:
             probimage[j,validsamples[0][m],validsamples[1][m]] = probabilities[m]
             
             # Convert the probability to a binary mask with threshold 0.5
-            threshold,mask[j,:,:] = cv2.threshold(probimage[j,:,:],0.5,1.0,cv2.THRESH_BINARY)
-        
-    Dice_Scores=DSC(mask,Valid_labels)
+            threshold,mask = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)
+    
+    dices=calculateDice(mask, Valid_labels)
+    plotResults(Valid_frames, Valid_labels, mask)
