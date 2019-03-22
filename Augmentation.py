@@ -75,7 +75,7 @@ augmented_data=[]
 augmented_slices=[]
 #sl_count=[0]
  
-for i in range(len(data)):
+for i in range(20):
     #extract ED and ES frame for each patient with the ground truths
     ED_frame=data[i][2]
     EDgt_frame=data[i][3]
@@ -83,6 +83,10 @@ for i in range(len(data)):
     ESgt_frame=data[i][5]
     #extract slice number
     n=data[i][1]
+    ED_frame_aug=ED_frame
+    ED_frame_gt=EDgt_frame
+    ES_frame_aug=ES_frame
+    ES_frame_gt=ESgt_frame
     #extract slices of ED, ES and ground truths
     for j in range(n):
         ED_slice=data[i][2][j]
@@ -104,9 +108,12 @@ for i in range(len(data)):
             ESgt_aug=ESgt_slice
             #augmented_slices.append(ED_aug)
     #make frames from slices (2D->3D)
-    
+        ED_frame_aug[j]=ED_aug
+        ED_frame_gt[j]=EDgt_aug
+        ES_frame_aug[j]=ES_aug
+        ES_frame_gt[j]=ESgt_aug
     #save in list: patient number, slice number, ED, ground truth ED, ES, ground truth ES
-        augmented_data.append([data[i][0]+100,j+1,ED_aug,EDgt_aug,ES_aug,ESgt_aug])
+        augmented_data.append([data[i][0]+100,j+1,ED_frame_aug,ED_frame_gt,ES_frame_aug,ES_frame_gt])
    # sl_count.append(sl_count[i]+n)
 
 print('Augmentation succeeded')
