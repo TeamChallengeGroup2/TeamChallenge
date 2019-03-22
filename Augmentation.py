@@ -73,7 +73,7 @@ print('Data Loaded')
  
 augmented_data=[]
 augmented_slices=[]
-sl_count=[0]
+#sl_count=[0]
  
 for i in range(len(data)):
     #extract ED and ES frame for each patient with the ground truths
@@ -90,23 +90,23 @@ for i in range(len(data)):
         ES_slice=data[i][4][j]
         ESgt_slice=data[i][5][j]
     #flip the slices
-        if j<=n//2:
+        if i<=10:
             ED_aug=np.fliplr(ED_slice)
             EDgt_aug=np.fliplr(EDgt_slice)
             ES_aug=np.fliplr(ES_slice)
             ESgt_aug=np.fliplr(ESgt_slice)
             #augmented_slices.append(ED_aug)
     #apply Gaussian blur filter
-        if j>n//2 and j<=n:
+        if i>10 and i<=20:
             ED_aug=cv2.GaussianBlur(ED_slice,(5,5),0) 
-            EDgt_aug=cv2.GaussianBlur(EDgt_slice,(5,5),0)
+            EDgt_aug=EDgt_slice
             ES_aug=cv2.GaussianBlur(ES_slice,(5,5),0)
-            ESgt_aug=cv2.GaussianBlur(ESgt_slice,(5,5),0)
+            ESgt_aug=ESgt_slice
             #augmented_slices.append(ED_aug)
     #make frames from slices (2D->3D)
     
     #save in list: patient number, slice number, ED, ground truth ED, ES, ground truth ES
-    augmented_data.append([data[i][0]+100,j+1,ED_aug,EDgt_aug,ES_aug,ESgt_aug])
-    sl_count.append(sl_count[i]+n)
+        augmented_data.append([data[i][0]+100,j+1,ED_aug,EDgt_aug,ES_aug,ESgt_aug])
+   # sl_count.append(sl_count[i]+n)
 
 print('Augmentation succeeded')
