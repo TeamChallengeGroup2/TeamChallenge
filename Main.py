@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Mar 12 14:39:37 2019
-
 Team Challenge (TU/e & UU)
 Team 2
 """
@@ -12,25 +11,35 @@ import time
 import random
 import cv2
 import matplotlib.pyplot as plt
+import itertools
+import scipy
 
 from Data import loadData
 from Cropping import cropROI
 from Network import buildUnet
 from Patches import make2Dpatches, make2Dpatchestest
+from Validate import plotResults, calculateDice, metrics
 
 # -----------------------------------------------------------------------------
 # INPUT
-networkpath = r'trainednetwork_batchnorm.h5'
-minibatches = 1000
+path = r'C:\Users\s144314\Documents\Team Challenge\TeamChallenge'
+networkpath = r'trainednetwork.h5'
+minibatches = 20#1000
 minibatchsize = 100
 patchsize = 32
 trainnetwork = False
 validation = True
+plot = False
 
 # -----------------------------------------------------------------------------
 # LOADING THE DATA
-data=loadData()
+data=loadData(path)
 print('Data Loaded')
+
+# -----------------------------------------------------------------------------
+# DATA AUGMENTATION
+#data=augmentation(data_original,10)
+#print('Augmentation succeeded')
 
 # -----------------------------------------------------------------------------
 # CROPPING
@@ -57,7 +66,7 @@ for j in range(len(data)):
             ESslicegt=data[j][5][h]
             
             # Save the data in lists
-            output.append([data[j][0],h+1,EDslice[EDx1:EDx2, EDy1:EDy2],EDslicegt[EDx1:EDx2, EDy1:EDy2],ESslice[ESx1:ESx2, ESy1:ESy2],ESslicegt[ESx1:ESx2, ESy1:ESy2]])
+            output.append([data[j][0],h+1,EDslice[EDx1:EDx2, EDy1:EDy2],EDslicegt[EDx1:EDx2, EDy1:EDy2],ESslice[ESx1:ESx2, ESy1:ESy2],ESslicegt[ESx1:ESx2, ESy1:ESy2],data[j][6]])
             slice_count.append(slice_count[j]+n)
             
 print('Images cropped')
@@ -69,20 +78,21 @@ print('Images cropped')
 random.shuffle(output)
 
 # Split the list l into a list containing all ED frames
-EDframes = []
-EDground = []
-ESframes = []
-ESground = []
+frames = []
+groundtruth = []
+spacings = []
 
-for i in range(len(output)):
-    EDframes.append(output[i][2])
-    EDground.append(output[i][3])
-    ESframes.append(output[i][4])
-    ESground.append(output[i][5])
-
-# Take the ES frames and ED frames 
-frames = ESframes+EDframes
-groundtruth = ESground+EDground
+for i in range(len(output)):    
+    # Append the ED frame 
+    frames.append(output[i][2])
+    # Append the ES frame
+    frames.append(output[i][4])
+    # Append the ED groundtruth 
+    groundtruth.append(output[i][3])
+    # Append the ES groundtruth
+    groundtruth.append(output[i][5])
+    # Append the spacing
+    spacings.append(output[i][6])
 
 # Convert the lists containing the frames and groundtruth to arrays
 frames=np.array(frames)
@@ -173,52 +183,26 @@ print ('Training is finished')
 # -----------------------------------------------------------------------------
 # VALIDATION
 
-def plotResults(Valid_frames, Valid_labels, mask):
-    
-    plt.figure()
-    for i in range(1, len(Valid_frames), 3):
-        plt.subplot(len(Valid_frames), 3, i)
-        plt.imshow(Valid_frames[i-1], cmap='gray')
-        plt.subplot(len(Valid_frames), 3, i+1)
-        plt.imshow(Valid_frames[i], cmap='gray')
-        plt.subplot(len(Valid_frames), 3, i+2)
-        plt.imshow(Valid_frames[i+1], cmap='gray')
-        
-def calculateDice(masks, Valid_labels):
-    
-    
-    dices=[]
-    
-    for i in range(len(Valid_labels)):
-        gt=np.where(Valid_labels[i]==3, 1, 0)
-        dice=np.sum(mask[i,gt==1])*2.0/(np.sum(mask[i])+np.sum(gt))
-        dices.append(dice)
-    
-    
-    
-    return dices
-
-
-
 if validation:
     
-    validsamples=50
+    # Number of patients to validate
+    valsamples=25
     
-    sample_idx=random.sample(range(len(Valid_frames)), validsamples)
+    # All indices for sample_idx are the ED frames and sample_idx+1 are the ES frames
+    idx=np.multiply(2,random.sample(range(len(Valid_frames)//2), valsamples))
+    sample_idx=list(itertools.chain(*zip(idx, idx++1)))
     
     Valid_frames=Valid_frames[sample_idx]
     Valid_labels=Valid_labels[sample_idx]
     
-    
     probimage = np.zeros(Valid_frames.shape)
-
+    
     # Loop through all frames in the validation set
     for j in range(np.shape(Valid_frames)[0]):
-        
         print('Image {} of {}'. format(j, np.shape(Valid_frames)[0]))
         
         # Take all labels of the Left ventricle (3) or all structures together
-        validsamples=np.where(Valid_labels[j]==3)
+        validsamples = np.where(Valid_labels[j]==3)
         probabilities = np.empty((0,))
         
         # Define the minibatchsize, it can be as large as the memory allows
@@ -236,7 +220,7 @@ if validation:
                     
             # Make the patches
             Xval = make2Dpatchestest(validsamples,valbatch,Valid_frames[j],patchsize)
-        
+
             # Compute the probability
             prob = cnn.predict(Xval, batch_size=minibatchsize)
             probabilities = np.concatenate((probabilities,prob[:,1]))
@@ -247,6 +231,29 @@ if validation:
             
             # Convert the probability to a binary mask with threshold 0.5
             threshold,mask = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)
+            mask=scipy.ndimage.binary_closing(mask).astype(np.int)
     
-    dices=calculateDice(mask, Valid_labels)
-    plotResults(Valid_frames, Valid_labels, mask)
+    # Compute the DICE coefficient, accuracy, sensitivity and specificity per image
+    dices = calculateDice(mask, Valid_labels)
+    Accuracy, Sensitivity, Specificity = metrics(mask, Valid_labels)
+    
+    # Plot the results
+    if plot:
+        plotResults(Valid_frames, Valid_labels, mask)
+    
+# -----------------------------------------------------------------------------
+# EJECTION FRACTION
+EF=[]
+
+for k in range(0,len(probimage),2):
+    # Determine the voxelvolume
+    voxelvolume = spacings[k][0]*spacings[k][1]*spacings[k][2]
+    
+    # Compute the stroke volume from the end-diastolic (ED) and end-systolic (ES) volume
+    ED_volume = np.sum(mask[k,:,:]==1)*voxelvolume
+    ES_volume = np.sum(mask[k+1,:,:]==1)*voxelvolume
+    strokevolume = ED_volume - ES_volume
+    
+    # Compute the Ejection fraction per patient and save in a list
+    LV_EF = (strokevolume/ED_volume)*100
+    EF.append(LV_EF)

@@ -14,6 +14,7 @@ def loadData(datapath):
     # number, the number of slices per frame, and the four 3D frames as arrays
     os.chdir(datapath)
     l=[]
+    spacings=[]
     for i, name in enumerate(os.listdir('Data')):
         data = open('Data\{}\Info.cfg'.format(name), 'r')
         
@@ -38,7 +39,11 @@ def loadData(datapath):
                 else:
                     im_ESframe= sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
                     im_ESgt=sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
-                    
+        
+        # The spacings of the ES and ED frames are equal
+        spacing= im_ESframe.GetSpacing() 
+        spacings.append(spacing)
+        
         # Converting the 3d images into 3 dimensional arrays:        
         arr_EDframe= sitk.GetArrayFromImage(im_EDframe)
         arr_EDgt= sitk.GetArrayFromImage(im_EDgt)
@@ -48,6 +53,6 @@ def loadData(datapath):
         NSlices=arr_EDframe.shape[0]
         
         # Save all in a list 
-        l.append([i+1, NSlices,arr_EDframe,arr_EDgt,arr_ESframe,arr_ESgt])
+        l.append([i+1, NSlices,arr_EDframe,arr_EDgt,arr_ESframe,arr_ESgt,spacing])
         
     return l
