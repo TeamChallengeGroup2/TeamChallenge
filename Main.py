@@ -16,6 +16,7 @@ import scipy
 import os
 
 from Data import loadData
+from Augmentation import augmentation
 from Cropping import cropROI
 from Network import buildUnet
 from fcnNetwork import fcn_model
@@ -28,7 +29,7 @@ from Validate import plotResults, calculateDice, metrics
 path = os.path.realpath(__file__).replace("\\Main.py","")
 networkpath = r'trainednetwork.h5'
 nr_augmentations = 30
-minibatches = 20#1000
+minibatches = 1000
 minibatchsize = 100
 patchsize = 32
 trainnetwork = True
@@ -37,7 +38,7 @@ plot = False
 
 # -----------------------------------------------------------------------------
 # LOADING THE DATA
-data=loadData(path)
+data_original=loadData(path)
 print('Data Loaded')
 
 # -----------------------------------------------------------------------------

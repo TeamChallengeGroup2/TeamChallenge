@@ -61,7 +61,7 @@ def augmentation(data,k):
             ES_frame_gt[j]=ESgt_aug
                    
             # Save in list: patient number, slice number, ED, ground truth ED, ES, ground truth ES
-            augmented_data.append([data[i][0]+100,j+1,ED_frame_aug,ED_frame_gt,ES_frame_aug,ES_frame_gt])
+            augmented_data.append([data[i][0]+100,j+1,ED_frame_aug,ED_frame_gt,ES_frame_aug,ES_frame_gt,data[i][6]])
             # sl_count.append(sl_count[i]+n)
                     
      return augmented_data
