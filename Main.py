@@ -13,21 +13,25 @@ import cv2
 import matplotlib.pyplot as plt
 import itertools
 import scipy
+import os
 
 from Data import loadData
 from Cropping import cropROI
 from Network import buildUnet
+from fcnNetwork import fcn_model
 from Patches import make2Dpatches, make2Dpatchestest
 from Validate import plotResults, calculateDice, metrics
 
+
 # -----------------------------------------------------------------------------
 # INPUT
-path = r'C:\Users\s144314\Documents\Team Challenge\TeamChallenge'
+path = os.path.realpath(__file__).replace("\\Main.py","")
 networkpath = r'trainednetwork.h5'
+nr_augmentations = 30
 minibatches = 20#1000
 minibatchsize = 100
 patchsize = 32
-trainnetwork = False
+trainnetwork = True
 validation = True
 plot = False
 
@@ -38,8 +42,8 @@ print('Data Loaded')
 
 # -----------------------------------------------------------------------------
 # DATA AUGMENTATION
-#data=augmentation(data_original,10)
-#print('Augmentation succeeded')
+data=augmentation(data_original,nr_augmentations)
+print('Augmentation succeeded')
 
 # -----------------------------------------------------------------------------
 # CROPPING
@@ -122,6 +126,7 @@ Test_labels = np.array(Test_labels)
 
 # Initialise the network
 cnn = buildUnet()
+#cnn = fcn_model((32,32,1),2,weights=None)
 
 # Seperately select the positive samples (Left ventricle) and negative samples (background)
 positivesamples = np.nonzero(Train_labels)
@@ -199,7 +204,7 @@ if validation:
     
     # Loop through all frames in the validation set
     for j in range(np.shape(Valid_frames)[0]):
-        print('Image {} of {}'. format(j, np.shape(Valid_frames)[0]))
+        print('Image {} of {}'. format(j+1, np.shape(Valid_frames)[0]))
         
         # Take all labels of the Left ventricle (3) or all structures together
         validsamples = np.where(Valid_labels[j]==3)
