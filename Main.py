@@ -32,7 +32,7 @@ nr_augmentations = 30
 minibatches = 1000
 minibatchsize = 100
 patchsize = 32
-trainnetwork = True
+trainnetwork = False
 validation = True
 plot = False
 
@@ -192,7 +192,7 @@ print ('Training is finished')
 if validation:
     
     # Number of patients to validate
-    valsamples=25
+    valsamples=5
     
     # All indices for sample_idx are the ED frames and sample_idx+1 are the ES frames
     idx=np.multiply(2,random.sample(range(len(Valid_frames)//2), valsamples))
@@ -250,16 +250,25 @@ if validation:
 # -----------------------------------------------------------------------------
 # EJECTION FRACTION
 EF=[]
+EF_gt=[]
 
 for k in range(0,len(probimage),2):
     # Determine the voxelvolume
-    voxelvolume = spacings[k][0]*spacings[k][1]*spacings[k][2]
+    voxelvolume_ED = spacings[k][0]*spacings[k][1]*spacings[k][2]
+    voxelvolume_ES = spacings[k+1][0]*spacings[k+1][1]*spacings[k+1][2]
     
     # Compute the stroke volume from the end-diastolic (ED) and end-systolic (ES) volume
-    ED_volume = np.sum(mask[k,:,:]==1)*voxelvolume
-    ES_volume = np.sum(mask[k+1,:,:]==1)*voxelvolume
+    ED_volume = np.sum(mask[k,:,:]==1)*voxelvolume_ED
+    ES_volume = np.sum(mask[k+1,:,:]==1)*voxelvolume_ES
     strokevolume = ED_volume - ES_volume
     
     # Compute the Ejection fraction per patient and save in a list
     LV_EF = (strokevolume/ED_volume)*100
     EF.append(LV_EF)
+    
+    # Ground truth
+    ED_volume_gt = np.sum(Valid_labels[k,:,:]==3)*voxelvolume_ED
+    ES_volume_gt = np.sum(Valid_labels[k+1,:,:]==3)*voxelvolume_ES
+    strokevolume_gt = ED_volume_gt - ES_volume_gt
+    LV_EF_gt = (strokevolume_gt/ED_volume_gt)*100
+    EF_gt.append(LV_EF_gt)
