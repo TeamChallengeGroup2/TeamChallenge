@@ -252,7 +252,7 @@ if validation:
 EF=[]
 EF_gt=[]
 
-for k in range(0,len(probimage),2):
+for k in range(0,len(mask),2):
     # Determine the voxelvolume
     voxelvolume_ED = spacings[k][0]*spacings[k][1]*spacings[k][2]
     voxelvolume_ES = spacings[k+1][0]*spacings[k+1][1]*spacings[k+1][2]
