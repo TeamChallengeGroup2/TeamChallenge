@@ -16,13 +16,13 @@ def DSC(segmented, groundtruth):
         for i in range(segmented.shape[1]):
             for j in range(segmented.shape[2]):
                 # define every pixel as a TP/FP/TN/FN and add it to the right category
-                if segmented[im_nr,i,j] == 1 and groundtruth[im_nr,i,j] !=0:
+                if segmented[im_nr,i,j] == 1 and groundtruth[im_nr,i,j] ==3:
                     TP += 1
-                elif segmented[im_nr,i,j] == 1 and groundtruth[im_nr,i,j] ==0:
+                elif segmented[im_nr,i,j] == 1 and groundtruth[im_nr,i,j] !=3:
                     FP += 1
-                elif segmented[im_nr,i,j] == 0 and groundtruth[im_nr,i,j] ==0:
+                elif segmented[im_nr,i,j] == 0 and groundtruth[im_nr,i,j] !=3:
                     TN += 1
-                elif segmented[im_nr,i,j] == 0 and groundtruth[im_nr,i,j] !=0:
+                elif segmented[im_nr,i,j] == 0 and groundtruth[im_nr,i,j] ==3:
                     FN += 1
                 
             
