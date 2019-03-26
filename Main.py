@@ -22,8 +22,6 @@ from Network import buildUnet
 from fcnNetwork import fcn_model
 from Patches import make2Dpatches, make2Dpatchestest
 from Validate import plotResults, calculateDice, metrics
-from DICEscore import DSC
-
 
 # -----------------------------------------------------------------------------
 # INPUT
@@ -128,7 +126,7 @@ Test_labels = np.array(Test_labels)
 
 # Initialise the network
 #cnn = buildUnet()
-cnn = fcn_model((32,32,1),2,weights='fcn_weights.h5')
+cnn = fcn_model((32,32,1),2,weights=None)
 
 # Seperately select the positive samples (Left ventricle) and negative samples (background)
 positivesamples = np.nonzero(Train_labels)
@@ -185,7 +183,6 @@ else:
     # Load the network
     cnn = keras.models.load_model(networkpath)
     
-    
 print ('Training is finished')
 
 # -----------------------------------------------------------------------------
@@ -194,7 +191,7 @@ print ('Training is finished')
 if validation:
     
     # Number of patients to validate
-    valsamples=4
+    valsamples=5
     
     # All indices for sample_idx are the ED frames and sample_idx+1 are the ES frames
     idx=np.multiply(2,random.sample(range(len(Valid_frames)//2), valsamples))
@@ -237,13 +234,15 @@ if validation:
         for m in range(len(validsamples[0])):
             probimage[j,validsamples[0][m],validsamples[1][m]] = probabilities[m]
             
-            # Convert the probability to a binary mask with threshold 0.5
-            threshold,mask = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)
-           
-            mask=scipy.ndimage.binary_closing(mask).astype(np.int)
+    # Convert the probability to a binary mask with threshold 0.5. In addition, perform 
+    # morphological closing with padding to overcome problems at the edge slices
+    mask_pad = np.zeros((probimage.shape[0]+2,probimage.shape[1],probimage.shape[2]))
+    mask_pad[1:len(mask_pad)-1,:,:] = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)[1]
+    mask_pad = scipy.ndimage.binary_closing(mask_pad).astype(np.int)
+    mask = mask_pad[1:len(mask_pad)-1,:,:]
     
     # Compute the DICE coefficient, accuracy, sensitivity and specificity per image
-    dices = DSC(mask, Valid_labels)
+    dices = calculateDice(mask, Valid_labels)
     Accuracy, Sensitivity, Specificity = metrics(mask, Valid_labels)
     
     # Plot the results
@@ -253,16 +252,25 @@ if validation:
 # -----------------------------------------------------------------------------
 # EJECTION FRACTION
 EF=[]
+EF_gt=[]
 
-for k in range(0,len(probimage),2):
+for k in range(0,len(mask),2):
     # Determine the voxelvolume
-    voxelvolume = spacings[k][0]*spacings[k][1]*spacings[k][2]
+    voxelvolume_ED = spacings[k][0]*spacings[k][1]*spacings[k][2]
+    voxelvolume_ES = spacings[k+1][0]*spacings[k+1][1]*spacings[k+1][2]
     
     # Compute the stroke volume from the end-diastolic (ED) and end-systolic (ES) volume
-    ED_volume = np.sum(mask[k,:,:]==1)*voxelvolume
-    ES_volume = np.sum(mask[k+1,:,:]==1)*voxelvolume
+    ED_volume = np.sum(mask[k,:,:]==1)*voxelvolume_ED
+    ES_volume = np.sum(mask[k+1,:,:]==1)*voxelvolume_ES
     strokevolume = ED_volume - ES_volume
     
     # Compute the Ejection fraction per patient and save in a list
     LV_EF = (strokevolume/ED_volume)*100
     EF.append(LV_EF)
+    
+    # Ground truth
+    ED_volume_gt = np.sum(Valid_labels[k,:,:]==3)*voxelvolume_ED
+    ES_volume_gt = np.sum(Valid_labels[k+1,:,:]==3)*voxelvolume_ES
+    strokevolume_gt = ED_volume_gt - ES_volume_gt
+    LV_EF_gt = (strokevolume_gt/ED_volume_gt)*100
+    EF_gt.append(LV_EF_gt)
