@@ -22,8 +22,7 @@ def DSC(segmented, groundtruth):
                 elif segmented[im_nr,i,j] == 0 and groundtruth[im_nr,i,j] !=3:
                     TN += 1
                 elif segmented[im_nr,i,j] == 0 and groundtruth[im_nr,i,j] ==3:
-                    FN += 1
-                
+                    FN += 1     
             
         All_TP.append(TP)
         All_FP.append(FP)
