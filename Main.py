@@ -242,8 +242,7 @@ if validation:
     mask = mask_pad[1:len(mask_pad)-1,:,:]
     
     # Compute the DICE coefficient, accuracy, sensitivity and specificity per image
-    dices = calculateDice(mask, Valid_labels)
-    Accuracy, Sensitivity, Specificity = metrics(mask, Valid_labels)
+    Dice, Accuracy, Sensitivity, Specificity = metrics(mask, Valid_labels)
     
     # Plot the results
     if plot:
