@@ -6,13 +6,12 @@ def DSC(segmented, groundtruth):
     All_FN = []
     All_DSC = []
         
-    TP = 0      # true positives
-    TN = 0      # true negatives
-    FP = 0      # false positives
-    FN = 0      # false negatives
-        
     # Loop through every pixel
     for im_nr in range(segmented.shape[0]):
+        TP = 0      # true positives
+        TN = 0      # true negatives
+        FP = 0      # false positives
+        FN = 0      # false negatives
         for i in range(segmented.shape[1]):
             for j in range(segmented.shape[2]):
                 # define every pixel as a TP/FP/TN/FN and add it to the right category
