@@ -18,16 +18,6 @@ def plotResults(Valid_frames, Valid_labels, mask):
         plt.imshow(Valid_frames[i], cmap='gray')
         plt.subplot(len(Valid_frames), 3, i+2)
         plt.imshow(Valid_frames[i+1], cmap='gray')
-        
-def calculateDice(mask, Valid_labels):
-    
-    dices=[]
-    
-    for i in range(len(Valid_labels)):
-        gt=np.where(Valid_labels[i]==3, 1, 0)
-        dice=np.sum(mask[i,gt==1])*2.0/(np.sum(mask[i])+np.sum(gt))
-        dices.append(dice)
-    return dices
 
 def metrics(mask,Valid_labels):
     Dice = []
