@@ -30,6 +30,7 @@ def calculateDice(mask, Valid_labels):
     return dices
 
 def metrics(mask,Valid_labels):
+    Dice = []
     Accuracy = []
     Sensitivity = []
     Specificity = []
@@ -53,15 +54,28 @@ def metrics(mask,Valid_labels):
                             
                 if mask[i,j,k] == 0 and Valid_labels[i,j,k] != 3:
                     TN = TN+1
-                        
+        if TP==0:
+            TP=0.0001
+        if TN == 0:
+            TN = 0.0001
+        #Dice score
+        DSC=2*TP/(2*TP+FP+FN)   
+        if TP == 0.0001:
+            DSC = 0
+        Dice.append(DSC)            
         # Accuracy
         Acc = (TP+TN)/(TP+FN+FP+TN)
         Accuracy.append(Acc)
-   
+
         # Sensitivity and Specificity
         Sens = TP/(TP+FN)
+        if TP == 0.0001:
+            Sens = 0
         Sensitivity.append(Sens)
+
         Spec = TN/(FP+TN)
+        if TN == 0.0001:
+            Spec = 0
         Specificity.append(Spec)
         
-    return Accuracy, Sensitivity, Specificity
+    return Dice, Accuracy, Sensitivity, Specificity
