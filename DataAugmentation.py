@@ -80,6 +80,9 @@ def create_Augmented_Data(data_original):
     
     # Provide the same seed and keyword arguments to the fit and flow methods
     seed = 1
+    
+    augmented_images=images
+    augmented_segmentations=segmentations
     # make the images and segmentations rank 4 so they could be augmentated
     images=np.expand_dims(images, axis=3)
     segmentations=np.expand_dims(segmentations, axis=3)
@@ -87,35 +90,23 @@ def create_Augmented_Data(data_original):
     image_datagen.fit(images, augment=True, seed=seed)
     segmentations_datagen.fit(segmentations, augment=True, seed=seed)
 
-    augmented_images=[]
-    augmented_segmentations=[]
-    
     print('Generate Images')
     batches=0
     for x_batch in image_datagen.flow(images, batch_size=25, seed=seed):
         print('Batch: ', batches)
         x_batch=np.squeeze(x_batch)
-        plt.figure()
-        for i in range(25):
-            plt.subplot(5,5,i+1)
-            plt.imshow(x_batch[i,:,:], cmap='gray')
-        plt.show()
-        augmented_images.append(x_batch)
+        augmented_images=np.concatenate((augmented_images,x_batch), axis=0)
         batches+=1
         if batches >=3:
             break
+        
        
     print('Generate Segmentations')
     batches=0
     for y_batch in image_datagen.flow(segmentations, batch_size=25, seed=seed):
         print('Batch: ', batches)
         y_batch=np.squeeze(y_batch)
-        plt.figure()
-        for i in range(25):
-            plt.subplot(5,5,i+1)
-            plt.imshow(y_batch[i,:,:], cmap='gray')
-        plt.show()
-        augmented_segmentations.append(y_batch)
+        augmented_segmentations=np.concatenate((augmented_segmentations,y_batch), axis=0)
         batches+=1
         if batches >=3:
             break
@@ -126,3 +117,11 @@ path=r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2'
 data_original=loadData(path)
 augmented_images, augmented_segmentations=create_Augmented_Data(data_original)
 
+
+plt.figure()
+plt.imshow(augmented_images[1802,:,:], cmap='gray')
+plt.show()
+
+plt.figure()
+plt.imshow(augmented_segmentations[1802,:,:], cmap='gray')
+plt.show()
