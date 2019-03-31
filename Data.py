@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Mar 12 14:43:05 2019
+Loading the data
 
 Team Challenge (TU/e & UU)
 Team 2

@@ -1,65 +1,54 @@
-#!/usr/bin/env python
-# coding: utf-8
+"""
+Fully Convolutional Neural Network
 
-# In[ ]:
+Team Challenge (TU/e & UU)
+Team 2
+"""
 
-
-import os
-import numpy as np
 from keras.models import Model
-from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Conv2DTranspose
-from keras.optimizers import Adam
+from keras.layers import Input, Conv2D, MaxPooling2D, Conv2DTranspose
 from keras import backend as K
-
-import PIL
 import keras
-
 from keras import optimizers
-from keras.layers import Dropout, Lambda, average, ZeroPadding2D, Cropping2D
-import random
+from keras.layers import Lambda, ZeroPadding2D
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
+# -----------------------------------------------------------------------------
 
-# In[ ]:
-
-
+# Function which performs the spatial mean-variance normalization per channel
 def mvn(tensor):
-    '''Performs per-channel spatial mean-variance normalization.'''
     epsilon = 1e-6
     mean = K.mean(tensor, axis=(1,2), keepdims=True)
     std = K.std(tensor, axis=(1,2), keepdims=True)
     mvn = (tensor - mean) / (std + epsilon)
-    
+
     return mvn
 
-
+# Function which computes the average dice coefficient per batch
 def dice_coef(y_true, y_pred, smooth=0.0):
-    '''Average dice coefficient per batch.'''
     axes = (1,2,3)
     intersection = K.sum(y_true * y_pred, axis=axes)
     summation = K.sum(y_true, axis=axes) + K.sum(y_pred, axis=axes)
     
     return K.mean((2.0 * intersection + smooth) / (summation + smooth), axis=0)
 
-
+# Function which computes the average dice coefficient loss per batch
 def dice_coef_loss(y_true, y_pred):
     return 1.0 - dice_coef(y_true, y_pred, smooth=10.0)
 
-
+# Function which computes the average jaccard coefficient per batch
 def jaccard_coef(y_true, y_pred, smooth=0.0):
-    '''Average jaccard coefficient per batch.'''
     axes = (1,2,3)
     intersection = K.sum(y_true * y_pred, axis=axes)
     union = K.sum(y_true, axis=axes) + K.sum(y_pred, axis=axes) - intersection
     return K.mean( (intersection + smooth) / (union + smooth), axis=0)
 
+# -----------------------------------------------------------------------------
 
-# In[ ]:
-
-
+# Function to define the FCN network
 def fcn_model(input_shape, num_classes, weights=None):
-    ''' "Skip" FCN architecture similar to Long et al., 2015
+    ''' FCN architecture based on a study of Long et al., 2015
     https://arxiv.org/abs/1411.4038
     '''
     if num_classes == 2:

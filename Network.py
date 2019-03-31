@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Mar 12 14:52:14 2019
+Unet Network
 
 Team Challenge (TU/e & UU)
 Team 2

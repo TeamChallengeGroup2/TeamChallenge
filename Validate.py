@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-
 """
-Created on Sun Mar 24 14:51:13 2019
+Functions to plot some results and compute some validation metrics
 
-@author: s144314
+Team Challenge (TU/e & UU)
+Team 2
 """
 
 import matplotlib.pyplot as plt
-import numpy as np
 
+# Function to plot some validation results
 def plotResults(Valid_frames, Valid_labels, mask):
     
     plt.figure()
@@ -44,15 +44,21 @@ def metrics(mask,Valid_labels):
                             
                 if mask[i,j,k] == 0 and Valid_labels[i,j,k] != 3:
                     TN = TN+1
+        
+        # Overcome computation problems (dividing by zero) by setting the number
+        # of true positives and true negatives to a very small number if these 
+        # numbers are originally equal to zero
         if TP==0:
             TP=0.0001
         if TN == 0:
             TN = 0.0001
-        #Dice score
+            
+        # Dice score
         DSC=2*TP/(2*TP+FP+FN)   
         if TP == 0.0001:
             DSC = 0
-        Dice.append(DSC)            
+        Dice.append(DSC)  
+          
         # Accuracy
         Acc = (TP+TN)/(TP+FN+FP+TN)
         Accuracy.append(Acc)

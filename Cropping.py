@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Mar 12 14:44:10 2019
+Cropping the Region of interest (ROI)
 
 Team Challenge (TU/e & UU)
 Team 2

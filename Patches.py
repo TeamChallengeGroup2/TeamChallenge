@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Mar 12 14:52:45 2019
+Creating the 2D patches
 
 Team Challenge (TU/e & UU)
 Team 2

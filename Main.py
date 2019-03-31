@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Mar 12 14:39:37 2019
+Main script
+
 Team Challenge (TU/e & UU)
 Team 2
 """
@@ -9,30 +9,25 @@ import numpy as np
 import keras
 import time
 import random
-import cv2
-import matplotlib.pyplot as plt
-import itertools
-import scipy
 import os
+import cv2
 
 from Data import loadData
 from Augmentation import augmentation
 from Cropping import cropROI
-from Network import buildUnet
 from fcnNetwork import fcn_model
-from Patches import make2Dpatches, make2Dpatchestest
-from Validate import plotResults, calculateDice, metrics
+from Validate import plotResults, metrics
 
 # -----------------------------------------------------------------------------
 # INPUT
-path = os.path.realpath(__file__).replace("\\Main.py","")
+path = os.path.realpath("Main.py").replace("\\Main.py","")
 networkpath = r'trainednetwork.h5'
 nr_augmentations = 30
 minibatches = 1000
 minibatchsize = 100
 patchsize = 32
-trainnetwork = False
-validation = True
+trainnetwork = True
+testing = True
 plot = False
 
 # -----------------------------------------------------------------------------
@@ -107,77 +102,41 @@ halfsize = int(patchsize/2)
 frames = np.pad(frames,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
 groundtruth = np.pad(groundtruth,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
     
-# Split up the data set into a training, test and validation set
-Train_frames = frames[:int(len(frames)/2)]
-Valid_frames = frames[int(len(frames)/2):int(len(frames)-len(frames)/4)]
+# Split up the data set into a training and test set. Note that the validation frames
+# are included in the Train_frames array
+Train_frames = frames[:3*int(len(frames)/4)]
 Test_frames = frames[int(len(frames)-len(frames)/4):]
 
 Train_frames = np.array(Train_frames)
-Valid_frames = np.array(Valid_frames)
 Test_frames = np.array(Test_frames)
 
-Train_labels = groundtruth[:int(len(groundtruth)/2)]
-Valid_labels = groundtruth[int(len(groundtruth)/2):int(len(groundtruth)-len(groundtruth)/4)]
+Train_labels = groundtruth[:3*int(len(groundtruth)/4)]
 Test_labels = groundtruth[int(len(groundtruth)-len(groundtruth)/4):]
 
 Train_labels = np.array(Train_labels)
-Valid_labels = np.array(Valid_labels)
 Test_labels = np.array(Test_labels)
 
-# Initialise the network
-#cnn = buildUnet()
-cnn = fcn_model((32,32,1),2,weights=None)
+# Scale the masks to binary masks
+Train_labels = cv2.threshold(Train_labels,2.5,1.0,cv2.THRESH_BINARY)[1]
+Test_labels = cv2.threshold(Test_labels,2.5,1.0,cv2.THRESH_BINARY)[1]
 
-# Seperately select the positive samples (Left ventricle) and negative samples (background)
-positivesamples = np.nonzero(Train_labels)
-negativesamples = np.nonzero(Train_frames-Train_labels)
-
-validsamples=np.where(Valid_labels==3)
+# Initialize the model
+cnn  = fcn_model((158,158,1),2,weights=None)
 
 # Train the network
+print ('Start training')
+
 if trainnetwork:
-    trainlosslist = []
-    validlosslist = []
-    probabilities = np.empty((0,))
     t0 = time.time()
-
-    for i in range(minibatches):
-        # Take random samples
-        posbatch = random.sample(list(range(len(positivesamples[0]))),int(minibatchsize/2))
-        negbatch = random.sample(list(range(len(negativesamples[0]))),int(minibatchsize/2))
-        
-        valid_batch = random.sample(list(range(len(validsamples[0]))), int(minibatchsize/2))
-        
-        # Make the patches
-        Xpos, Ypos = make2Dpatches(positivesamples,posbatch,Train_frames,patchsize,1) # double patchsize for rotation
-        Xneg, Yneg = make2Dpatches(negativesamples,negbatch,Train_frames,patchsize,0)   # it is cropped later
-        
-        x_valid, y_valid = make2Dpatches(validsamples, valid_batch, Valid_frames, patchsize, 1)
-        
-        # Concatenate the positive and negative patches
-        Xtrain = np.vstack((Xpos,Xneg))
-        Ytrain = np.vstack((Ypos,Yneg))
-
-        # Perform the training and compute the training loss
-        train_loss = cnn.train_on_batch(Xtrain,Ytrain)
-        trainlosslist.append(train_loss[0])
-        
-        # Perform the validation and compute the validation loss
-        valid_loss = cnn.test_on_batch(x_valid, y_valid)
-        validlosslist.append(valid_loss[0])
-        
-        print('Batch: {}'.format(i))
-        print('Train Loss: {} \t Train Accuracy: {}'.format(train_loss[0], train_loss[1]))
-        print('Valid loss: {} \t Valid Accuracy: {}'.format(valid_loss[0], valid_loss[1]))
-        
+    
+    # Train the network 
+    hist=cnn.fit(Train_frames[:,:,:,np.newaxis], Train_labels[:,:,:,np.newaxis],
+            batch_size=5, epochs=1, verbose=1, shuffle=True, validation_split = 0.25)
+    
     # Save the network
     cnn.save(networkpath)
     t1 = time.time()
     print('\nTraining time: {} seconds'.format(t1 - t0))
-    
-    plt.figure()
-    plt.plot(trainlosslist)
-    plt.plot(validlosslist)
     
 else:
     # Load the network
@@ -187,69 +146,30 @@ print ('Training is finished')
 
 # -----------------------------------------------------------------------------
 # VALIDATION
+print ('Start testing')
 
-if validation:
+if testing:
     
-    # Number of patients to validate
-    valsamples=5
-    
-    # All indices for sample_idx are the ED frames and sample_idx+1 are the ES frames
-    idx=np.multiply(2,random.sample(range(len(Valid_frames)//2), valsamples))
-    sample_idx=list(itertools.chain(*zip(idx, idx++1)))
-    
-    Valid_frames=Valid_frames[sample_idx]
-    Valid_labels=Valid_labels[sample_idx]
-    
-    probimage = np.zeros(Valid_frames.shape)
-    
-    # Loop through all frames in the validation set
-    for j in range(np.shape(Valid_frames)[0]):
-        print('Image {} of {}'. format(j+1, np.shape(Valid_frames)[0]))
-        
-        # Take all labels of the Left ventricle (3) or all structures together
-        validsamples = np.where(Valid_labels[j]==3)
-        probabilities = np.empty((0,))
-        
-        # Define the minibatchsize, it can be as large as the memory allows
-        minibatchsize = 100
-    
-        # Loop through all samples
-        for k in range(0,len(validsamples[0]),minibatchsize):
-            print('{}/{} samples labelled'.format(k,len(validsamples[0])))
-        
-            # Determine the batches for the validation
-            if k+minibatchsize < len(validsamples[0]):
-                valbatch = np.arange(k,k+minibatchsize)        
-            else:
-                valbatch = np.arange(k,len(validsamples[0]))        
-                    
-            # Make the patches
-            Xval = make2Dpatchestest(validsamples,valbatch,Valid_frames[j],patchsize)
+    # Predict the masks
+    mask = cnn.predict(Test_frames[:,:,:,np.newaxis], verbose=1)
 
-            # Compute the probability
-            prob = cnn.predict(Xval, batch_size=minibatchsize)
-            probabilities = np.concatenate((probabilities,prob[:,1]))
-    
-        # Create the probability image        
-        for m in range(len(validsamples[0])):
-            probimage[j,validsamples[0][m],validsamples[1][m]] = probabilities[m]
-            
-    # Convert the probability to a binary mask with threshold 0.5. In addition, perform 
-    # morphological closing with padding to overcome problems at the edge slices
-    mask_pad = np.zeros((probimage.shape[0]+2,probimage.shape[1],probimage.shape[2]))
-    mask_pad[1:len(mask_pad)-1,:,:] = cv2.threshold(probimage,0.5,1.0,cv2.THRESH_BINARY)[1]
-    mask_pad = scipy.ndimage.binary_closing(mask_pad).astype(np.int)
-    mask = mask_pad[1:len(mask_pad)-1,:,:]
+    # As the prediction have the channels dimension (3th dimension per slice), 
+    # to go back to 2 dimensions per slice:
+    mask=np.squeeze(mask)
     
     # Compute the DICE coefficient, accuracy, sensitivity and specificity per image
-    Dice, Accuracy, Sensitivity, Specificity = metrics(mask, Valid_labels)
+    Dice, Accuracy, Sensitivity, Specificity = metrics(mask, Test_labels)
     
     # Plot the results
     if plot:
-        plotResults(Valid_frames, Valid_labels, mask)
+        plotResults(Test_frames, Test_labels, mask)
+
+print ('Testing is finished')
     
 # -----------------------------------------------------------------------------
 # EJECTION FRACTION
+print ('Start computing the Ejection Fraction')
+
 EF=[]
 EF_gt=[]
 
@@ -268,8 +188,10 @@ for k in range(0,len(mask),2):
     EF.append(LV_EF)
     
     # Ground truth
-    ED_volume_gt = np.sum(Valid_labels[k,:,:]==3)*voxelvolume_ED
-    ES_volume_gt = np.sum(Valid_labels[k+1,:,:]==3)*voxelvolume_ES
+    ED_volume_gt = np.sum(Test_labels[k,:,:]==3)*voxelvolume_ED
+    ES_volume_gt = np.sum(Test_labels[k+1,:,:]==3)*voxelvolume_ES
     strokevolume_gt = ED_volume_gt - ES_volume_gt
     LV_EF_gt = (strokevolume_gt/ED_volume_gt)*100
     EF_gt.append(LV_EF_gt)
+    
+print ('Ejection Fraction is computed')
