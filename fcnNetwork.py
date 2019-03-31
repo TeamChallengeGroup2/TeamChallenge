@@ -44,6 +44,23 @@ def jaccard_coef(y_true, y_pred, smooth=0.0):
     union = K.sum(y_true, axis=axes) + K.sum(y_pred, axis=axes) - intersection
     return K.mean( (intersection + smooth) / (union + smooth), axis=0)
 
+# Function which computes the tversky coefficient loss per batch
+def tversky_loss(Y_gt, Y_pred):
+    smooth = 1e-5
+    alpha = 0.5
+    beta = 0.5
+    ones = tf.ones(tf.shape(Y_gt))
+    p0 = Y_pred
+    p1 = ones - Y_pred
+    g0 = Y_gt
+    g1 = ones - Y_gt
+    num = tf.reduce_sum(p0 * g0, axis=[1, 2])
+    den = num + alpha * tf.reduce_sum(p0 * g1, axis=[1, 2]) + \
+          beta * tf.reduce_sum(p1 * g0, axis=[1, 2]) + smooth
+    tversky = tf.reduce_sum(num / den, axis=1)
+    loss = tf.reduce_mean(1 - tversky)
+    return loss
+
 # -----------------------------------------------------------------------------
 
 # Function to define the FCN network
@@ -53,7 +70,7 @@ def fcn_model(input_shape, num_classes, weights=None):
     '''
     if num_classes == 2:
         num_classes = 1
-        loss = dice_coef_loss
+        loss = tversky_loss
         activation = 'sigmoid'
     else:
         loss = 'categorical_crossentropy'
