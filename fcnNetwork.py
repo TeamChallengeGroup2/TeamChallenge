@@ -5,6 +5,7 @@ Team Challenge (TU/e & UU)
 Team 2
 """
 
+import tensorflow as tf
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, Conv2DTranspose
 from keras import backend as K

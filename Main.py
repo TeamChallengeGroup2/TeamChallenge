@@ -23,9 +23,8 @@ from Validate import plotResults, metrics
 path = os.path.realpath("Main.py").replace("\\Main.py","")
 networkpath = r'trainednetwork.h5'
 nr_augmentations = 30
-minibatches = 1000
-minibatchsize = 100
-patchsize = 32
+batchsize = 5
+epochs = 10
 trainnetwork = True
 testing = True
 plot = False
@@ -97,11 +96,6 @@ for i in range(len(output)):
 frames=np.array(frames)
 groundtruth=np.array(groundtruth)
 
-# Pad the images with zeros to allow patch extraction at all locations
-halfsize = int(patchsize/2)    
-frames = np.pad(frames,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
-groundtruth = np.pad(groundtruth,((0,0),(halfsize,halfsize),(halfsize,halfsize)),'constant', constant_values=0)
-    
 # Split up the data set into a training and test set. Note that the validation frames
 # are included in the Train_frames array
 Train_frames = frames[:3*int(len(frames)/4)]
@@ -121,7 +115,7 @@ Train_labels = cv2.threshold(Train_labels,2.5,1.0,cv2.THRESH_BINARY)[1]
 Test_labels = cv2.threshold(Test_labels,2.5,1.0,cv2.THRESH_BINARY)[1]
 
 # Initialize the model
-cnn  = fcn_model((158,158,1),2,weights=None)
+cnn  = fcn_model((126,126,1),2,weights=None)
 
 # Train the network
 print ('Start training')
@@ -131,7 +125,7 @@ if trainnetwork:
     
     # Train the network 
     hist=cnn.fit(Train_frames[:,:,:,np.newaxis], Train_labels[:,:,:,np.newaxis],
-            batch_size=5, epochs=1, verbose=1, shuffle=True, validation_split = 0.25)
+            batch_size=batchsize, epochs=epochs, verbose=1, shuffle=True, validation_split = 0.25)
     
     # Save the network
     cnn.save(networkpath)
