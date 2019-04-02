@@ -207,11 +207,11 @@ def evaluate_crop(gt_list, cropgt_list):
     for i in range(100):
         gt=gt_list[i][2]
         gt[gt<=2.]=0
-        gtn=np.sum(np.sum(np.sum(gt, axis=0), axis=0), axis=0)
+        gtn=gt.sum()
         
         cropgt=cropgt_list[i][2]
         cropgt[cropgt<=2.]=0
-        cropn=np.sum(np.sum(np.sum(cropgt, axis=0), axis=0), axis=0)
+        cropn=cropgt.sum()
         
         if gtn!=0:
             h=(cropn/gtn)*100
@@ -221,11 +221,11 @@ def evaluate_crop(gt_list, cropgt_list):
             
         gt=gt_list[i][3]
         gt[gt<=2.]=0
-        gtn=np.sum(np.sum(np.sum(gt, axis=0), axis=0), axis=0)
+        gtn=gt.sum()
         
         cropgt=cropgt_list[i][3]
         cropgt[cropgt<=2.]=0
-        cropn=np.sum(np.sum(np.sum(cropgt, axis=0), axis=0), axis=0)
+        cropn=cropgt.sum()
         
         if gtn!=0:
             h=(cropn/gtn)*100
