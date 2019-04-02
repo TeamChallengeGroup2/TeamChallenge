@@ -154,6 +154,10 @@ def load_crop(path):
         z=im_EDframe.GetSpacing()[2]
         new_spacing=(1.0,1.0,z)
         
+        if im_EDframe.GetSpacing()!=im_EDgt.GetSpacing() or im_ESframe.GetSpacing()!=im_ESgt.GetSpacing():
+            im_EDgt.SetSpacing(im_EDframe.GetSpacing())
+            im_ESgt.SetSpacing(im_ESframe.GetSpacing())
+        
         #Apply the same spacing in the X and Y dimensions to the images
         im_EDframe=respace(im_EDframe,new_spacing)
         im_EDgt=respace(im_EDgt,new_spacing)
