@@ -37,7 +37,8 @@ def biggest_region_3D(array):
         im_np=array
     struct=np.full((3,3,3),1)
     c=0
-    arr=np.where(im_np>=maxi,1,0)
+    maxn=im_np.max()
+    arr=np.where(im_np>=(maxn-0.2),1,0)
     lab, num_reg=ndlabel(arr,structure=struct)
     h=np.zeros(num_reg+1)
     for i in range(num_reg):
