@@ -35,12 +35,9 @@ def create_Augmented_Data(images, segmentations, b_size, numberofbatches):
  
        
     # Data augmentation parameters
-    data_gen_args = dict(featurewise_center=True,
-                         featurewise_std_normalization=True,
-                         rotation_range=90,
+    data_gen_args = dict(rotation_range=90,
                          horizontal_flip = True,
                          vertical_flip = True,
-                         brightness_range=[0.9,1.1]
                          )
     
     # Data generators

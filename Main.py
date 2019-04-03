@@ -22,14 +22,14 @@ from DataAugmentation import create_Augmented_Data
 # -----------------------------------------------------------------------------
 # INPUT
 path = r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2'
-networkpath = r'trainednetwork.h5'
+networkpath = r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2\Github Scripts 5\augmentation_trainednetwork.h5'
 nr_of_batches_augmentation = 30
 batchsize_augmentation = 25
 batchsize = 5
 epochs = 10
 trainnetwork = True
 testing = True
-plot = False
+plot = True
 augmentation = True
 EjectionFraction = False
 
