@@ -21,13 +21,13 @@ from DataAugmentation import create_Augmented_Data
 
 # -----------------------------------------------------------------------------
 # INPUT
-path = r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2'
-networkpath = r'C:\Users\s141352\Documents\BMT\Master\Team Challenge\Part 2\Github Scripts 5\augmentation_trainednetwork.h5'
+path = r'C:\Users\s154150\Desktop\Team Challenge\TeamChallenge'
+networkpath = r'C:\Users\s154150\Desktop\Team Challenge\TeamChallenge\augmentation_trainednetwork.h5'
 nr_of_batches_augmentation = 30
 batchsize_augmentation = 25
 batchsize = 5
-epochs = 1
-trainnetwork = True
+epochs = 20
+trainnetwork = False
 testing = True
 plot = True
 augmentation = True
@@ -121,7 +121,7 @@ if trainnetwork:
     
 else:
     # Load the network
-    cnn = keras.models.load_model(networkpath)
+    cnn.load_weights('augmentation_trainednetwork.h5')
     
 print ('Training is finished')
 
