@@ -9,6 +9,7 @@ import time
 import random
 import os
 import cv2
+import pickle
 
 from Data import loadData
 from Cropping import cropImage
@@ -128,6 +129,8 @@ if trainnetwork:
     cnn.save(networkpath)
     t1 = time.time()
     print('\nTraining time: {} seconds'.format(t1 - t0))
+    with open('training_history.pkl', 'wb') as f:
+        pickle.dump(hist.history, f)
     
 else:
     # Load the network
