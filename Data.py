@@ -8,6 +8,15 @@ Team 2
 import os
 import SimpleITK as sitk
 
+def respace(itk_image, new_spacing):
+    spacing = itk_image.GetSpacing()
+    size = itk_image.GetSize()
+    new_size = (np.round(size*(spacing/np.array(new_spacing)))).astype(int).tolist()
+    new_image = sitk.Resample(itk_image, new_size, sitk.Transform(),sitk.sitkNearestNeighbor,
+                            itk_image.GetOrigin(), new_spacing, itk_image.GetDirection(), 0.0,
+                            itk_image.GetPixelID())
+    return new_image
+
 def loadData(datapath):
     # This function loads the data and save it into a list with the patient 
     # number, the number of slices per frame, and the four 3D frames as arrays
@@ -42,6 +51,19 @@ def loadData(datapath):
         # The spacings of the ES and ED frames are equal
         spacing= im_ESframe.GetSpacing() 
         spacings.append(spacing)
+        
+        z=spacing[2]
+        new_spacing=(1.0,1.0,z)
+        
+        if im_EDframe.GetSpacing()!=im_EDgt.GetSpacing() or im_ESframe.GetSpacing()!=im_ESgt.GetSpacing():
+            im_EDgt.SetSpacing(im_EDframe.GetSpacing())
+            im_ESgt.SetSpacing(im_ESframe.GetSpacing())
+        
+        im_EDframe=respace(im_EDframe,new_spacing)
+        im_EDgt=respace(im_EDgt,new_spacing)
+        im_ESframe=respace(im_ESframe,new_spacing)
+        im_ESgt=respace(im_ESgt,new_spacing)
+    
         
         # Converting the 3d images into 3 dimensional arrays:        
         arr_EDframe= sitk.GetArrayFromImage(im_EDframe)
