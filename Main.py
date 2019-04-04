@@ -1,37 +1,35 @@
 """
 Main script
-
 Team Challenge (TU/e & UU)
 Team 2
 """
 
 import numpy as np
-import keras
 import time
 import random
 import os
 import cv2
-import matplotlib.pyplot as plt
 
 from Data import loadData
-from Cropping import cropROI, cropImage
+from Cropping import cropImage
 from fcnNetwork import fcn_model
 from Validate import plotResults, metrics
 from DataAugmentation import create_Augmented_Data
+from EF_calculation import EjectionFraction
 
 # -----------------------------------------------------------------------------
 # INPUT
-path = r'C:\Users\s154150\Desktop\Team Challenge\TeamChallenge'
-networkpath = r'C:\Users\s154150\Desktop\Team Challenge\TeamChallenge\augmentation_trainednetwork.h5'
+path = os.path.realpath("Main.py").replace("\\Main.py","")
+networkpath = r'trainednetwork.h5'
 nr_of_batches_augmentation = 30
 batchsize_augmentation = 25
 batchsize = 5
 epochs = 20
-trainnetwork = False
-testing = True
-plot = True
 augmentation = True
-EjectionFraction = False
+trainnetwork = True
+testing = True
+plot = False
+Compute_EjectionFraction = True
 
 # -----------------------------------------------------------------------------
 # LOADING THE DATA
@@ -52,12 +50,16 @@ Test_frames_info=[]
 for i in range(len(Test_frames)):
     Test_frames_info.append([Test_frames[i][0],Test_frames[i][1],Test_frames[i][6]])
     
-    
 # Shuffle the training data to take a random subset for training later
 random.shuffle(Train_frames)
 
-Train_slices_cropped = cropImage(Train_frames)
-Test_slices_cropped = cropImage(Test_frames)
+# -----------------------------------------------------------------------------
+# CROPPING
+Train_slices_cropped, excluded_Train = cropImage(Train_frames)
+Test_slices_cropped, excluded_Test = cropImage(Test_frames)
+
+# -----------------------------------------------------------------------------
+# DIVIDING THE DATA
 
 # Extract the frames and spacing
 slicesTrain = []
@@ -102,15 +104,16 @@ groundtruthTest = np.array(groundtruthTest)
 groundtruthTrain = cv2.threshold(groundtruthTrain,2.5,1.0,cv2.THRESH_BINARY)[1]
 groundtruthTest = cv2.threshold(groundtruthTest,2.5,1.0,cv2.THRESH_BINARY)[1]
 
-# Augment the data
+# -----------------------------------------------------------------------------
+# DATA AUGMENTATION
 if augmentation:
     slicesTrain, groundtruthTrain = create_Augmented_Data(slicesTrain, groundtruthTrain, batchsize_augmentation, nr_of_batches_augmentation)
 
-# Initialize the model
-cnn  = fcn_model((128,128,1),2,weights=None)
-
 # -----------------------------------------------------------------------------
 # TRAINING
+# Initialize the model
+cnn  = fcn_model((126,126,1),2,weights=None)
+
 if trainnetwork:
     
     # Train the network
@@ -128,7 +131,7 @@ if trainnetwork:
     
 else:
     # Load the network
-    cnn.load_weights('augmentation_trainednetwork.h5')
+    cnn.load_weights(networkpath)
     
 print ('Training is finished')
 
@@ -157,43 +160,42 @@ print ('Testing is finished')
 # -----------------------------------------------------------------------------
 # EJECTION FRACTION
 
-def EjectionFraction(maskED,maskES,voxelvolume):
-    
-    # Compute the stroke volume from the end-diastolic (ED) and end-systolic (ES) volume
-    maxn=maskED.max()
-    maskED=np.where(maskED>=(maxn-0.2),1,0)
-    maskES=np.where(maskES>=(maxn-0.2),1,0)
-    ED_volume = (maskED.sum())*voxelvolume
-    ES_volume = (maskES.sum())*voxelvolume
-    strokevolume = ED_volume - ES_volume
-    
-    # Compute the Ejection fraction
-    LV_EF = (strokevolume/ED_volume)*100
-    return LV_EF
-
-if EjectionFraction:
+if Compute_EjectionFraction:
     print ('Start computing the Ejection Fraction')
     
-    EF=[]
-    EF_gt=[]
-    count=0
-    for k in range(0,len(Test_frames_info)):
-        # Determine the voxelvolume
-        voxelvolume = Test_frames_info[k][2]
-        maskED = mask[count:count+Test_frames_info[k][1]]
-        maskES = mask[Test_frames_info[k][1]:2*Test_frames_info[k][1]]
-        count=count+2*Test_frames_info[k][1]
+    EF = []
+    EF_gt = []
+    count = 0
+    
+    for k in range(len(Test_frames_info)):
         
-        # Compute the Ejection fraction per patient and save in a list
-        LV_EF = EjectionFraction(maskED,maskES,voxelvolume)
-        EF.append(LV_EF)
+        # Only compute the EF if all frames of a patient can be cropped
+        if Test_frames[k][0] in excluded_Test:
+            LV_EF = 0
+            
+        else:
+            # Determine the voxelvolume
+            spacing = Test_frames_info[k][2]
+            voxelvolume = spacing[0] * spacing[1] * spacing[2]
+            maskED = mask[count:count+Test_frames_info[k][1]]
+            maskES = mask[Test_frames_info[k][1]:2*Test_frames_info[k][1]]
+            count = count + 2 * Test_frames_info[k][1]
+            
+            # Only compute the EF if both the ED and ES frame are predicted
+            if len(maskED) != 0 and len(maskES) != 0:
+                # Compute the Ejection fraction per patient
+                LV_EF = EjectionFraction(maskED,maskES,voxelvolume)
+            
+            else:
+                LV_EF = 0
+            
+            # Save all EF in a list
+            EF.append(LV_EF)
         
-        # Ground truth
+        # Compute the EF for the ground truth and save in a list
         gtED = Test_frames[k][3]
         gtES = Test_frames[k][5]
         LV_EF_gt = EjectionFraction(gtED,gtES,voxelvolume)
         EF_gt.append(LV_EF_gt)
-        
-        
         
     print ('Ejection Fraction is computed')

@@ -5,10 +5,12 @@ Team Challenge (TU/e & UU)
 Team 2
 """
 
+import numpy as np
 import os
 import SimpleITK as sitk
 
 def respace(itk_image, new_spacing):
+    # This function respaces the images
     spacing = itk_image.GetSpacing()
     size = itk_image.GetSize()
     new_size = (np.round(size*(spacing/np.array(new_spacing)))).astype(int).tolist()
@@ -21,57 +23,57 @@ def loadData(datapath):
     # This function loads the data and save it into a list with the patient 
     # number, the number of slices per frame, and the four 3D frames as arrays
     os.chdir(datapath)
-    l=[]
-    spacings=[]
+    l = []
+    spacings = []
     for i, name in enumerate(os.listdir('Data')):
         data = open('Data\{}\Info.cfg'.format(name), 'r')
         
-        ED=data.readline()    # End-diastolic frame information
+        ED = data.readline()    # End-diastolic frame information
         for s in ED.split():
             if s.isdigit():   # End-diastolic frame number
                 # Reading the end-diastolic 3d images:
                 if int(s)<10:
-                    im_EDframe= sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
-                    im_EDgt=sitk.ReadImage('Data\{}\{}_frame0{}_gt.nii.gz'.format(name,name,s))
+                    im_EDframe = sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
+                    im_EDgt = sitk.ReadImage('Data\{}\{}_frame0{}_gt.nii.gz'.format(name,name,s))
                 else:
-                    im_EDframe= sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
-                    im_EDgt=sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
+                    im_EDframe = sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
+                    im_EDgt = sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
                     
-        ES=data.readline()    # End-systolic frame information
+        ES = data.readline()    # End-systolic frame information
         for s in ES.split():
             if s.isdigit():   # End-systolic frame number
                 # Reading the end-systolic 3d images:
                 if int(s)<10:
-                    im_ESframe= sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
-                    im_ESgt=sitk.ReadImage('Data\{}\{}_frame0{}_gt.nii.gz'.format(name,name,s))
+                    im_ESframe = sitk.ReadImage('Data\{}\{}_frame0{}.nii.gz'.format(name,name,s))
+                    im_ESgt = sitk.ReadImage('Data\{}\{}_frame0{}_gt.nii.gz'.format(name,name,s))
                 else:
-                    im_ESframe= sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
-                    im_ESgt=sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
+                    im_ESframe = sitk.ReadImage('Data\{}\{}_frame{}.nii.gz'.format(name,name,s))
+                    im_ESgt = sitk.ReadImage('Data\{}\{}_frame{}_gt.nii.gz'.format(name,name,s))
         
         # The spacings of the ES and ED frames are equal
-        spacing= im_ESframe.GetSpacing() 
+        spacing = im_ESframe.GetSpacing() 
         spacings.append(spacing)
         
-        z=spacing[2]
-        new_spacing=(1.0,1.0,z)
+        z = spacing[2]
+        new_spacing = (1.0,1.0,z)
         
-        if im_EDframe.GetSpacing()!=im_EDgt.GetSpacing() or im_ESframe.GetSpacing()!=im_ESgt.GetSpacing():
+        if im_EDframe.GetSpacing() != im_EDgt.GetSpacing() or im_ESframe.GetSpacing() != im_ESgt.GetSpacing():
             im_EDgt.SetSpacing(im_EDframe.GetSpacing())
             im_ESgt.SetSpacing(im_ESframe.GetSpacing())
         
-        im_EDframe=respace(im_EDframe,new_spacing)
-        im_EDgt=respace(im_EDgt,new_spacing)
-        im_ESframe=respace(im_ESframe,new_spacing)
-        im_ESgt=respace(im_ESgt,new_spacing)
+        im_EDframe = respace(im_EDframe,new_spacing)
+        im_EDgt = respace(im_EDgt,new_spacing)
+        im_ESframe = respace(im_ESframe,new_spacing)
+        im_ESgt = respace(im_ESgt,new_spacing)
     
         
         # Converting the 3d images into 3 dimensional arrays:        
-        arr_EDframe= sitk.GetArrayFromImage(im_EDframe)
-        arr_EDgt= sitk.GetArrayFromImage(im_EDgt)
-        arr_ESframe= sitk.GetArrayFromImage(im_ESframe)
-        arr_ESgt= sitk.GetArrayFromImage(im_ESgt)
+        arr_EDframe = sitk.GetArrayFromImage(im_EDframe)
+        arr_EDgt = sitk.GetArrayFromImage(im_EDgt)
+        arr_ESframe = sitk.GetArrayFromImage(im_ESframe)
+        arr_ESgt = sitk.GetArrayFromImage(im_ESgt)
         
-        NSlices=arr_EDframe.shape[0]
+        NSlices = arr_EDframe.shape[0]
         
         # Save all in a list 
         l.append([i+1, NSlices,arr_EDframe,arr_EDgt,arr_ESframe,arr_ESgt,spacing])

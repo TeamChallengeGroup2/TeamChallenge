@@ -78,18 +78,18 @@ def fcn_model(input_shape, num_classes, weights=None):
         activation = 'softmax'
 
     kwargs = dict(
-        kernel_size=3,
-        strides=1,
-        activation='relu',
-        padding='same',
-        use_bias=True,
-        kernel_initializer='glorot_uniform',
-        bias_initializer='zeros',
-        bias_regularizer=None,
-        activity_regularizer=None,
-        kernel_constraint=None,
-        bias_constraint=None,
-        trainable=True,
+        kernel_size = 3,
+        strides = 1,
+        activation = 'relu',
+        padding = 'same',
+        use_bias = True,
+        kernel_initializer = 'glorot_uniform',
+        bias_initializer = 'zeros',
+        bias_regularizer = None,
+        activity_regularizer = None,
+        kernel_constraint = None,
+        bias_constraint = None,
+        trainable = True,
     )
     
     data = Input(shape=input_shape, dtype='float', name='data')
