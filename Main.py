@@ -39,6 +39,7 @@ data_original=loadData(path)
 print('Data Loaded')
 
 # Shuffle the data to take a random subset for training later
+random.seed(0)
 random.shuffle(data_original)
 
 # Split up the data set into a training and test set. Note that the validation frames
@@ -46,47 +47,53 @@ random.shuffle(data_original)
 Train_frames = data_original[:3*int(len(data_original)/4)]
 Test_frames = data_original[int(len(data_original)-len(data_original)/4):]
 
+#Info: per frame, patient number,number of slices and spacing
+Test_frames_info=[]
+for i in range(len(Test_frames)):
+    Test_frames_info.append([Test_frames[i][0],Test_frames[i][1],Test_frames[i][6]])
+    
+    
 # Shuffle the training data to take a random subset for training later
 random.shuffle(Train_frames)
 
-Train_frames_cropped = cropImage(Train_frames)
-Test_frames_cropped = cropImage(Test_frames)
+Train_slices_cropped = cropImage(Train_frames)
+Test_slices_cropped = cropImage(Test_frames)
 
 # Extract the frames and spacing
-framesTrain = []
+slicesTrain = []
 groundtruthTrain = []
 spacingsTrain = []
 
-framesTest = []
+slicesTest = []
 groundtruthTest = []
 spacingsTest = []
 
-for i in range(len(Train_frames_cropped)):    
+for i in range(len(Train_slices_cropped)):    
     # Append the ED frame 
-    framesTrain.append(Train_frames_cropped[i][2])
+    slicesTrain.append(Train_slices_cropped[i][2])
     # Append the ES frame
-    framesTrain.append(Train_frames_cropped[i][4])
+    slicesTrain.append(Train_slices_cropped[i][4])
     # Append the ED groundtruth 
-    groundtruthTrain.append(Train_frames_cropped[i][3])
+    groundtruthTrain.append(Train_slices_cropped[i][3])
     # Append the ES groundtruth
-    groundtruthTrain.append(Train_frames_cropped[i][5])
+    groundtruthTrain.append(Train_slices_cropped[i][5])
     # Append the spacing
-    spacingsTrain.append(Train_frames_cropped[i][6])
+    spacingsTrain.append(Train_slices_cropped[i][6])
     
-for i in range(len(Test_frames_cropped)):    
+for i in range(len(Test_slices_cropped)):    
     # Append the ED frame 
-    framesTest.append(Test_frames_cropped[i][2])
+    slicesTest.append(Test_slices_cropped[i][2])
     # Append the ES frame
-    framesTest.append(Test_frames_cropped[i][4])
+    slicesTest.append(Test_slices_cropped[i][4])
     # Append the ED groundtruth 
-    groundtruthTest.append(Test_frames_cropped[i][3])
+    groundtruthTest.append(Test_slices_cropped[i][3])
     # Append the ES groundtruth
-    groundtruthTest.append(Test_frames_cropped[i][5])
+    groundtruthTest.append(Test_slices_cropped[i][5])
     # Append the spacing
-    spacingsTest.append(Test_frames_cropped[i][6])
+    spacingsTest.append(Test_slices_cropped[i][6])
 
-framesTrain = np.array(framesTrain)
-framesTest = np.array(framesTest)
+slicesTrain = np.array(slicesTrain)
+slicesTest = np.array(slicesTest)
 
 groundtruthTrain = np.array(groundtruthTrain)
 groundtruthTest = np.array(groundtruthTest)
@@ -97,10 +104,10 @@ groundtruthTest = cv2.threshold(groundtruthTest,2.5,1.0,cv2.THRESH_BINARY)[1]
 
 # Augment the data
 if augmentation:
-    framesTrain, groundtruthTrain = create_Augmented_Data(framesTrain, groundtruthTrain, batchsize_augmentation, nr_of_batches_augmentation)
+    slicesTrain, groundtruthTrain = create_Augmented_Data(slicesTrain, groundtruthTrain, batchsize_augmentation, nr_of_batches_augmentation)
 
 # Initialize the model
-cnn  = fcn_model((126,126,1),2,weights=None)
+cnn  = fcn_model((128,128,1),2,weights=None)
 
 # -----------------------------------------------------------------------------
 # TRAINING
@@ -111,8 +118,8 @@ if trainnetwork:
     t0 = time.time()
     
     # Train the network 
-    hist=cnn.fit(framesTrain[:,:,:,np.newaxis], groundtruthTrain[:,:,:,np.newaxis],
-            batch_size=batchsize, epochs=epochs, verbose=1, shuffle=True, validation_split = 0.25)
+    hist=cnn.fit(slicesTrain[:,:,:,np.newaxis], groundtruthTrain[:,:,:,np.newaxis],
+            batch_size=batchsize, epochs=epochs, verbose=1, shuffle=True, validation_split = 0.3)
     
     # Save the network
     cnn.save(networkpath)
@@ -132,7 +139,7 @@ print ('Start testing')
 if testing:
     
     # Predict the masks
-    mask = cnn.predict(framesTest[:,:,:,np.newaxis], verbose=1)
+    mask = cnn.predict(slicesTest[:,:,:,np.newaxis], verbose=1)
 
     # As the prediction have the channels dimension (3th dimension per slice), 
     # to go back to 2 dimensions per slice:
@@ -143,38 +150,50 @@ if testing:
     
     # Plot the results
     if plot:
-        plotResults(framesTest, groundtruthTest, mask)
+        plotResults(slicesTest, groundtruthTest, mask)
 
 print ('Testing is finished')
     
 # -----------------------------------------------------------------------------
 # EJECTION FRACTION
 
+def EjectionFraction(maskED,maskES,voxelvolume):
+    
+    # Compute the stroke volume from the end-diastolic (ED) and end-systolic (ES) volume
+    maxn=maskED.max()
+    maskED=np.where(maskED>=(maxn-0.2),1,0)
+    maskES=np.where(maskES>=(maxn-0.2),1,0)
+    ED_volume = (maskED.sum())*voxelvolume
+    ES_volume = (maskES.sum())*voxelvolume
+    strokevolume = ED_volume - ES_volume
+    
+    # Compute the Ejection fraction
+    LV_EF = (strokevolume/ED_volume)*100
+    return LV_EF
+
 if EjectionFraction:
     print ('Start computing the Ejection Fraction')
     
     EF=[]
     EF_gt=[]
-    
-    for k in range(0,len(mask),2):
+    count=0
+    for k in range(0,len(Test_frames_info)):
         # Determine the voxelvolume
-        voxelvolume_ED = spacings[k][0]*spacings[k][1]*spacings[k][2]
-        voxelvolume_ES = spacings[k+1][0]*spacings[k+1][1]*spacings[k+1][2]
-        
-        # Compute the stroke volume from the end-diastolic (ED) and end-systolic (ES) volume
-        ED_volume = np.sum(mask[k,:,:]==1)*voxelvolume_ED
-        ES_volume = np.sum(mask[k+1,:,:]==1)*voxelvolume_ES
-        strokevolume = ED_volume - ES_volume
+        voxelvolume = Test_frames_info[k][2]
+        maskED = mask[count:count+Test_frames_info[k][1]]
+        maskES = mask[Test_frames_info[k][1]:2*Test_frames_info[k][1]]
+        count=count+2*Test_frames_info[k][1]
         
         # Compute the Ejection fraction per patient and save in a list
-        LV_EF = (strokevolume/ED_volume)*100
+        LV_EF = EjectionFraction(maskED,maskES,voxelvolume)
         EF.append(LV_EF)
         
         # Ground truth
-        ED_volume_gt = np.sum(Test_labels[k,:,:]==3)*voxelvolume_ED
-        ES_volume_gt = np.sum(Test_labels[k+1,:,:]==3)*voxelvolume_ES
-        strokevolume_gt = ED_volume_gt - ES_volume_gt
-        LV_EF_gt = (strokevolume_gt/ED_volume_gt)*100
+        gtED = Test_frames[k][3]
+        gtES = Test_frames[k][5]
+        LV_EF_gt = EjectionFraction(gtED,gtES,voxelvolume)
         EF_gt.append(LV_EF_gt)
+        
+        
         
     print ('Ejection Fraction is computed')
