@@ -77,7 +77,7 @@ def cropROI(arrayin, slicenr):
 def cropImage(data):
     # CROPPING
     data_cropped = [] # List with the patient number, the slices number, and the four 2D slices as arrays
-    slice_count = []
+    
     
     for j in range(len(data)):
     
@@ -88,7 +88,6 @@ def cropImage(data):
         cropped_EDim, EDx1, EDx2, EDy1, EDy2 = cropROI(EDframe,4)
         # Extract the slice number
         n = data[j][1]
-        slice_count.append(n)
             # Extract and save the ED and ES slices and ground truth slices
         for h in range(n):
             EDslice = data[j][2][h]
