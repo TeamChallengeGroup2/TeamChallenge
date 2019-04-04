@@ -181,7 +181,7 @@ if Compute_EjectionFraction:
             spacing = Test_frames_info[k][2]
             voxelvolume = spacing[0] * spacing[1] * spacing[2]
             maskED = mask[count:count+Test_frames_info[k][1]]
-            maskES = mask[Test_frames_info[k][1]:2*Test_frames_info[k][1]]
+            maskES = mask[count+Test_frames_info[k][1]:count+2*Test_frames_info[k][1]]
             count = count + 2 * Test_frames_info[k][1]
             
             # Only compute the EF if both the ED and ES frame are predicted
