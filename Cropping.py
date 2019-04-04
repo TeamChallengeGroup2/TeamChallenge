@@ -77,7 +77,8 @@ def cropROI(arrayin, slicenr):
 def cropImage(data):
     # CROPPING
     data_cropped = [] # List with the patient number, the slices number, and the four 2D slices as arrays
-    
+    slice_count = []
+    excluded = []
     
     for j in range(len(data)):
     
@@ -86,19 +87,26 @@ def cropImage(data):
         
         # Crop only if HoughCircles is able to find a circle
         cropped_EDim, EDx1, EDx2, EDy1, EDy2 = cropROI(EDframe,4)
-        # Extract the slice number
-        n = data[j][1]
+        
+        if cropped_EDim.size:
+            # Extract the slice number
+            n = data[j][1]
+            slice_count.append(n)
+            
             # Extract and save the ED and ES slices and ground truth slices
-        for h in range(n):
-            EDslice = data[j][2][h]
-            EDslicegt = data[j][3][h]
-            ESslice = data[j][4][h]
-            ESslicegt = data[j][5][h]
+            for h in range(n):
+                EDslice = data[j][2][h]
+                EDslicegt = data[j][3][h]
+                ESslice = data[j][4][h]
+                ESslicegt = data[j][5][h]
                 
                 # Save the data in lists
-            data_cropped.append([data[j][0],h+1,EDslice[EDx1:EDx2, EDy1:EDy2],EDslicegt[EDx1:EDx2, EDy1:EDy2],ESslice[EDx1:EDx2, EDy1:EDy2],ESslicegt[EDx1:EDx2, EDy1:EDy2],data[j][6]])
+                data_cropped.append([data[j][0],h+1,EDslice[EDx1:EDx2, EDy1:EDy2],EDslicegt[EDx1:EDx2, EDy1:EDy2],ESslice[EDx1:EDx2, EDy1:EDy2],ESslicegt[EDx1:EDx2, EDy1:EDy2],data[j][6]])
                 
+        else:
+            excluded.append(data[j][0])
                 
     print('Images cropped')
-    return data_cropped
+    
+    return data_cropped, excluded
     
