@@ -14,7 +14,7 @@ def cropROI(arrayin, slicenr):
     # [slicenr, imageX, imageY] and the slicenr as average over this number of slices
     
     LVradius=20 #the radius used in frst, which should be the radius of the LV in the top image
-    cropdiam=63 #the length in X and Y direction of the cropped image
+    cropdiam=64 #the length in X and Y direction of the cropped image
     
     multi_mindist = []
     multi_circles = []
@@ -51,13 +51,26 @@ def cropROI(arrayin, slicenr):
     sumdist1 = int(sumdist1/(slicenr))
     sumdist2 = int(sumdist2/(slicenr))
     
-    # Find the coordinates around which to crop
-    cropcoor_x1=sumdist1-cropdiam
-    cropcoor_x2=sumdist1+cropdiam
-    cropcoor_y1=sumdist2-cropdiam
-    cropcoor_y2=sumdist2+cropdiam
+    #find the coordinates around which to crop
+    if cropdiam>=sumdist1:
+        cropcoor_x1=0
+    else:
+        cropcoor_x1=sumdist1-cropdiam
+    cropcoor_x2=cropcoor_x1+2*cropdiam
+    if cropcoor_x2>=topslice.shape[0]:
+        cropcoor_x2=topslice.shape[0]
+        cropcoor_x1=cropcoor_x2-2*cropdiam
+        
+    if cropdiam>=sumdist2:
+        cropcoor_y1=0
+    else:
+        cropcoor_y1=sumdist2-cropdiam
+    cropcoor_y2=cropcoor_y1+2*cropdiam
+    if cropcoor_y2>=topslice.shape[1]:
+        cropcoor_y2=topslice.shape[1]
+        cropcoor_y1=cropcoor_y2-2*cropdiam
     
-    croppedim=im[sumdist1-cropdiam:sumdist1+cropdiam,sumdist2-cropdiam:sumdist2+cropdiam]
+    croppedim=im[cropcoor_x1:cropcoor_x2,cropcoor_y1:cropcoor_y2]
       
     return croppedim, cropcoor_x1, cropcoor_x2, cropcoor_y1, cropcoor_y2
 
@@ -68,26 +81,23 @@ def cropImage(data):
     
     for j in range(len(data)):
     
-        # Extract the ED frame and ES frame for each patient, separately
+        # Extract the ED frame for each patient
         EDframe=data[j][2]
-        ESframe=data[j][4]
         
         # Crop only if HoughCircles is able to find a circle
         cropped_EDim, EDx1, EDx2, EDy1, EDy2=cropROI(EDframe,4)
-        cropped_ESim, ESx1, ESx2, ESy1, ESy2=cropROI(ESframe,4)
-        if cropped_EDim.size and cropped_ESim.size:
-            # Extract the slice number
-            n=data[j][1]
-            slice_count.append(n)
+        # Extract the slice number
+        n=data[j][1]
+        slice_count.append(n)
             # Extract and save the ED and ES slices and ground truth slices
-            for h in range(n):
-                EDslice=data[j][2][h]
-                EDslicegt=data[j][3][h]
-                ESslice=data[j][4][h]
-                ESslicegt=data[j][5][h]
+        for h in range(n):
+            EDslice=data[j][2][h]
+            EDslicegt=data[j][3][h]
+            ESslice=data[j][4][h]
+            ESslicegt=data[j][5][h]
                 
                 # Save the data in lists
-                data_cropped.append([data[j][0],h+1,EDslice[EDx1:EDx2, EDy1:EDy2],EDslicegt[EDx1:EDx2, EDy1:EDy2],ESslice[ESx1:ESx2, ESy1:ESy2],ESslicegt[ESx1:ESx2, ESy1:ESy2],data[j][6]])
+            data_cropped.append([data[j][0],h+1,EDslice[EDx1:EDx2, EDy1:EDy2],EDslicegt[EDx1:EDx2, EDy1:EDy2],ESslice[EDx1:EDx2, EDy1:EDy2],ESslicegt[EDx1:EDx2, EDy1:EDy2],data[j][6]])
                 
                 
     print('Images cropped')
