@@ -11,7 +11,7 @@ import os
 import cv2
 import pickle
 
-from Data import loadData
+from Data import loadData, biggest_region_3D
 from Cropping import cropImage
 from fcnNetwork import fcn_model
 from Validate import plotResults, metrics
@@ -167,6 +167,7 @@ if Compute_EjectionFraction:
     print ('Start computing the Ejection Fraction')
     
     EF = []
+    postprocessed_EF = []
     EF_gt = []
     count = 0
     
@@ -175,12 +176,13 @@ if Compute_EjectionFraction:
         # Only compute the EF if all frames of a patient can be cropped
         if Test_frames[k][0] in excluded_Test:
             LV_EF = 0
+            new_LV_EF = 0
             
         else:
             # Determine the voxelvolume
             spacing = Test_frames_info[k][2]
             slices = Test_frames_info[k][1]
-            voxelvolume = spacing[0] * spacing[1] * spacing[2]
+            voxelvolume = spacing[2]
             maskED=np.zeros((slices,128,128))
             maskES=np.zeros((slices,128,128))
             for n in range(slices):
@@ -192,12 +194,19 @@ if Compute_EjectionFraction:
             if len(maskED) != 0 and len(maskES) != 0:
                 # Compute the Ejection fraction per patient
                 LV_EF = EjectionFraction(maskED,maskES,voxelvolume)
-            
+                
+                # Post process the frame isolating the biggest volume
+                new_maskED=biggest_region_3D(maskED)
+                new_maskES=biggest_region_3D(maskES)   
+                # Compute the ejection fraction of the processed images
+                new_LV_EF = EjectionFraction(new_maskED,new_maskES,voxelvolume)            
             else:
                 LV_EF = 0
+                new_LV_EF = 0
             
             # Save all EF in a list
             EF.append(LV_EF)
+            postprocessed_EF.append(new_LV_EF)
         
         # Compute the EF for the ground truth and save in a list
         gtED = Test_frames[k][3]
