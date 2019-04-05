@@ -113,7 +113,7 @@ if augmentation:
 # -----------------------------------------------------------------------------
 # TRAINING
 # Initialize the model
-cnn  = fcn_model((126,126,1),2,weights=None)
+cnn  = fcn_model((128,128,1),2,weights=None)
 
 if trainnetwork:
     
