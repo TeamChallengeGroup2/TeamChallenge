@@ -54,8 +54,9 @@ and their corresponding ground truth.
 ####  DSC calculation results:
 !['Results of testing'](figures/test_dice.png)
 
-Finally, in section eight *(line 161-201)* the ejection fraction for each testing
-patient is calculated twice. Once based upon the segmenting done by the model 
+Finally, in section eight *(line 161-217)* the ejection fraction for each testing
+patient is calculated three times. Once based upon the segmenting done by the model, once based
+upon the post-processing (using the biggest_region_3D() function from Data.py) of that prediction 
 and once based upon the ground truth manually made by experts.
 
 #### LVEF calculation results:
