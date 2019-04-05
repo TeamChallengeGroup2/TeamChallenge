@@ -41,7 +41,9 @@ training including the augmented data is given.
 
 In the sixth section (line 114-136) the training of the network is performed. As 
 mentioned before, 50% of the data is used for training. As network 
-the fcn network is used, is build calling fcn_model(). 
+the fcn network is used, it is built calling fcn_model(). 
+
+!['Results of training'](figures/model_scores.png)
 
 In the seventh section (line 139-158), the test images (25% of the data) are predicted and
 validated using some metrics like the Dice coefficient, accuracy, specificity and
