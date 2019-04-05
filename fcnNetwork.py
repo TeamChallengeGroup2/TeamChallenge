@@ -27,7 +27,7 @@ def mvn(tensor):
     return mvn
 
 # Function which computes the average dice coefficient per batch
-def dice_coef(y_true, y_pred, smooth=0.0):
+def dice_coef(y_true, y_pred, smooth=0.1):
     axes = (1,2,3)
     intersection = K.sum(y_true * y_pred, axis=axes)
     summation = K.sum(y_true, axis=axes) + K.sum(y_pred, axis=axes)
@@ -39,7 +39,7 @@ def dice_coef_loss(y_true, y_pred):
     return 1.0 - dice_coef(y_true, y_pred, smooth=10.0)
 
 # Function which computes the average jaccard coefficient per batch
-def jaccard_coef(y_true, y_pred, smooth=0.0):
+def jaccard_coef(y_true, y_pred, smooth=0.1):
     axes = (1,2,3)
     intersection = K.sum(y_true * y_pred, axis=axes)
     union = K.sum(y_true, axis=axes) + K.sum(y_pred, axis=axes) - intersection
