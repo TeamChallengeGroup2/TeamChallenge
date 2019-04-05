@@ -52,7 +52,7 @@ sensitivity computed with the function metrics() with as input the predicted mas
 and their corresponding ground truth. 
 
 ####  DSC calculation results:
-!['Results of testing'](figures/test_dice.png)
+!['Results of testing'](figures/test_dice_median.png)
 
 Finally, in section eight *(line 161-217)* the ejection fraction for each testing
 patient is calculated three times. Once based upon the segmenting done by the model, once based
