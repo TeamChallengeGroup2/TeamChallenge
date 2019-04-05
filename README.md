@@ -51,9 +51,12 @@ validated using some metrics like the Dice coefficient, accuracy, specificity an
 sensitivity computed with the function metrics() with as input the predicted mask 
 and their corresponding ground truth. 
 
+####  DSC calculation results:
+!['Results of testing'](figures/test_dice.png)
+
 Finally, in section eight *(line 161-201)* the ejection fraction for each testing
 patient is calculated twice. Once based upon the segmenting done by the model 
 and once based upon the ground truth manually made by experts.
 
-#### Results:
+#### LVEF calculation results:
 !['Results of testing (LVEF)'](figures/ef_test.png)
