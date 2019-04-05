@@ -5,8 +5,7 @@
 Automatic segmentation of the end-systole and end-distole MR images. The 
 segmentations are used to calculate the Ejection Fraction.
 
-#### Network architecture:
-!['model summary'](figures/model_summary.png)
+
 
 The main.py file should be run. In this file, functions from other files are 
 imported. 
@@ -44,7 +43,10 @@ training including the augmented data is given.
 
 In the sixth section *(line 114-136)* the training of the network is performed. As 
 mentioned before, 50% of the data is used for training. As network 
-the fcn network is used, it is built calling fcn_model(). 
+the fcn network is used, it is built calling fcn_model().
+
+#### Network architecture:
+!['model summary'](figures/model_summary.png)
 
 #### Training for 40 epochs:
 !['Results of training'](figures/Training_scores.png)
