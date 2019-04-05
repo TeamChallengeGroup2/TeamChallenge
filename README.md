@@ -44,7 +44,7 @@ mentioned before, 50% of the data is used for training. As network
 the fcn network is used, it is built calling fcn_model(). 
 
 #### Training for 40 epochs:
-!['Results of training'](figures/model_scores.png)
+!['Results of training'](figures/Training_scores.png)
 
 In the seventh section *(line 139-158)*, the test images (25% of the data) are predicted and
 validated using some metrics like the Dice coefficient, accuracy, specificity and
@@ -52,7 +52,7 @@ sensitivity computed with the function metrics() with as input the predicted mas
 and their corresponding ground truth. 
 
 ####  DSC calculation results:
-!['Results of testing'](figures/test_dice_median.png)
+!['Results of testing'](figures/DSC_test.png)
 
 Finally, in section eight *(line 161-217)* the ejection fraction for each testing
 patient is calculated three times. Once based upon the segmenting done by the model, once based
@@ -60,4 +60,4 @@ upon the post-processing (using the biggest_region_3D() function from Data.py) o
 and once based upon the ground truth manually made by experts.
 
 #### LVEF calculation results:
-!['Results of testing (LVEF)'](figures/ef_test.png)
+!['Results of testing (LVEF)'](figures/LVEF_test.png)
