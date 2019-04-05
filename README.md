@@ -43,6 +43,7 @@ In the sixth section (line 114-136) the training of the network is performed. As
 mentioned before, 50% of the data is used for training. As network 
 the fcn network is used, it is built calling fcn_model(). 
 
+#### Training for 40 epochs:
 !['Results of training'](figures/model_scores.png)
 
 In the seventh section (line 139-158), the test images (25% of the data) are predicted and
@@ -54,4 +55,5 @@ Finally, in section eight (line 161-201) the ejection fraction for each testing
 patient is calculated twice. Once based upon the segmenting done by the model 
 and once based upon the ground truth manually made by experts.
 
+#### Results:
 ![Results](figures/ef_test.png)
