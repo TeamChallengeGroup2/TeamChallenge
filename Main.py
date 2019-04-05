@@ -150,6 +150,12 @@ if testing:
     # As the prediction have the channels dimension (3th dimension per slice), 
     # to go back to 2 dimensions per slice:
     mask=np.squeeze(mask)
+    original_mask=mask
+    
+    ####This three lines for the consideration of slices outside the heart
+    for n in range(groundtruthTest.shape[0]):
+        if groundtruthTest[n].sum()==0:
+            mask[n]=groundtruthTest[n]
     
     # Compute the DICE coefficient, accuracy, sensitivity and specificity per image
     Dice, Accuracy, Sensitivity, Specificity = metrics(mask, groundtruthTest)
@@ -192,12 +198,14 @@ if Compute_EjectionFraction:
             
             # Only compute the EF if both the ED and ES frame are predicted
             if len(maskED) != 0 and len(maskES) != 0:
-                # Compute the Ejection fraction per patient
-                LV_EF = EjectionFraction(maskED,maskES,voxelvolume)
                 
                 # Post process the frame isolating the biggest volume
                 new_maskED=biggest_region_3D(maskED)
                 new_maskES=biggest_region_3D(maskES)   
+                #Adding this part
+                
+                # Compute the Ejection fraction per patient
+                LV_EF = EjectionFraction(maskED,maskES,voxelvolume)
                 # Compute the ejection fraction of the processed images
                 new_LV_EF = EjectionFraction(new_maskED,new_maskES,voxelvolume)            
             else:
