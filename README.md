@@ -5,7 +5,7 @@
 Automatic segmentation of the end-systole and end-distole MR images. The 
 segmentations are used to calculate the Ejection Fraction.
 
-The main.py file should be runned. In this file, functions from other files are 
+The main.py file should be run. In this file, functions from other files are 
 imported. 
 
 In the INPUT section *(line 21-32)* the user can change the parameters of the model.
