@@ -43,7 +43,7 @@ In the sixth section (line 114-136) the training of the network is performed. As
 mentioned before, 50% of the data is used for training. As network 
 the fcn network is used, is build calling fcn_model(). 
 
-In the seventh section (line 139-158), the test images (25% of the data) is predicted and
+In the seventh section (line 139-158), the test images (25% of the data) are predicted and
 validated using some metrics like the Dice coefficient, accuracy, specificity and
 sensitivity computed with the function metrics() with as input the predicted mask 
 and their corresponding ground truth. 
@@ -51,3 +51,5 @@ and their corresponding ground truth.
 Finally, in section eight (line 161-201) the ejection fraction for each testing
 patient is calculated twice. Once based upon the segmenting done by the model 
 and once based upon the ground truth manually made by experts.
+
+![Results][figures/ef_test.png]
