@@ -10,7 +10,7 @@ from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, Conv2DTranspose
 from keras import backend as K
 import keras
-from keras import optimizers
+from keras import optimizers, regularizers
 from keras.layers import Lambda, ZeroPadding2D
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
@@ -140,8 +140,9 @@ def fcn_model(input_shape, num_classes, weights=None):
     if weights is not None:
         model.load_weights(weights)
         
-    sgd = optimizers.SGD(lr=0.01, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd, loss=loss,
+    #sgd = optimizers.SGD(lr=0.01, momentum=0.9, nesterov=True)
+    adelta = optimizers.Adadelta()
+    model.compile(optimizer=adelta, loss=loss,
                   metrics=['accuracy', dice_coef, jaccard_coef])
 
     return model
