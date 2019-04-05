@@ -1,5 +1,5 @@
 """
-Loading the data
+Loading the data and image processing
 
 Team Challenge (TU/e & UU)
 Team 2
@@ -8,6 +8,8 @@ Team 2
 import numpy as np
 import os
 import SimpleITK as sitk
+from scipy import ndimage
+
 
 def respace(itk_image, new_spacing):
     # This function respaces the images
@@ -18,6 +20,25 @@ def respace(itk_image, new_spacing):
                             itk_image.GetOrigin(), new_spacing, itk_image.GetDirection(), 0.0,
                             itk_image.GetPixelID())
     return new_image
+
+def biggest_region_3D(array):
+    if len(array.shape)==4:
+        im_np=np.squeeze(array)
+    else:
+        im_np=array
+    struct=np.full((3,3,3),1)
+    c=0
+    maxn=im_np.max()
+    arr=np.where(im_np>=(maxn-0.2),1,0)
+    lab, num_reg=ndlabel(arr,structure=struct)
+    h=np.zeros(num_reg+1)
+    for i in range(num_reg):
+        z=np.where(lab==(i+1),1,0)
+        h[i+1]=z.sum()
+        if h[i+1]==h.max():
+            c=i+1
+    lab=np.where(lab==c,1,0)
+    return lab
 
 def loadData(datapath):
     # This function loads the data and save it into a list with the patient 
