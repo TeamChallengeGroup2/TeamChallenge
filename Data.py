@@ -9,6 +9,7 @@ import numpy as np
 import os
 import SimpleITK as sitk
 from scipy import ndimage
+From scipy.ndimage import label as ndlabel
 
 
 def respace(itk_image, new_spacing):
